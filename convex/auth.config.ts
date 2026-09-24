@@ -1,12 +1,11 @@
 /**
- * Clerk <-> Convex authentication.
- * Set CLERK_JWT_ISSUER_DOMAIN in the Convex dashboard to your Clerk Frontend API
- * URL (e.g. https://your-app.clerk.accounts.dev). See Convex + Clerk docs.
+ * Convex Auth — the deployment issues and verifies its own JWTs (no third party).
+ * CONVEX_SITE_URL is provided automatically by Convex.
  */
 export default {
   providers: [
     {
-      domain: process.env.CLERK_JWT_ISSUER_DOMAIN,
+      domain: process.env.CONVEX_SITE_URL,
       applicationID: "convex",
     },
   ],

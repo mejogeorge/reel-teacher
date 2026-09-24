@@ -39,10 +39,13 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.128.0",
+    "@auth/core": "0.41.1",
+    "@convex-dev/auth": "^0.0.95",
     "@convex-dev/rate-limiter": "^0.4.0",
     "@convex-dev/workflow": "^0.4.8",
     "@wordcast/shared": "workspace:*",
     "fast-xml-parser": "^5.11.1",
+    "jose": "^6.2.12",
     "naughty-words": "^1.2.0",
     "zod": "^3.25.76"
   }

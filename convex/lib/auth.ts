@@ -1,19 +1,19 @@
+import { getAuthUserId } from "@convex-dev/auth/server";
 import { constantTimeEqual, isAdminEmail } from "@wordcast/shared";
-import type { ActionCtx, MutationCtx, QueryCtx } from "../_generated/server";
+import type { MutationCtx, QueryCtx } from "../_generated/server";
 import { getAdminEmails, getWorkerSecret } from "./env";
 
-type AnyCtx = QueryCtx | MutationCtx | ActionCtx;
-
 /**
- * Require an authenticated Clerk user whose email is in ADMIN_EMAILS.
+ * Require an authenticated Convex Auth user whose email is in ADMIN_EMAILS.
  * Returns the normalized admin email. Throws otherwise.
  */
-export async function requireAdmin(ctx: AnyCtx): Promise<string> {
-  const identity = await ctx.auth.getUserIdentity();
-  if (!identity) {
+export async function requireAdmin(ctx: QueryCtx | MutationCtx): Promise<string> {
+  const userId = await getAuthUserId(ctx);
+  if (!userId) {
     throw new Error("Unauthenticated");
   }
-  const email = identity.email?.trim().toLowerCase();
+  const user = await ctx.db.get(userId);
+  const email = user?.email?.trim().toLowerCase();
   if (!email || !isAdminEmail(email, getAdminEmails())) {
     throw new Error("Forbidden: not an admin");
   }

@@ -11,7 +11,8 @@
     "test": "exit 0"
   },
   "dependencies": {
-    "@clerk/nextjs": "^6.9.6",
+    "@auth/core": "0.41.1",
+    "@convex-dev/auth": "^0.0.95",
     "@hookform/resolvers": "^5.9.1",
     "@radix-ui/react-slot": "^1.1.1",
     "@remotion/player": "4.0.528",

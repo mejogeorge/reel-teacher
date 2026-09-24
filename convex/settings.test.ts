@@ -11,6 +11,13 @@ beforeEach(() => {
   process.env.WORKER_SECRET = "test-worker-secret";
 });
 
+async function makeUser(
+  t: ReturnType<typeof convexTest>,
+  email: string,
+): Promise<string> {
+  return t.run(async (ctx) => ctx.db.insert("users", { email }));
+}
+
 describe("settings", () => {
   test("seed is idempotent", async () => {
     const t = convexTest(schema, modules);
@@ -28,14 +35,16 @@ describe("settings", () => {
   test("get rejects a non-admin caller", async () => {
     const t = convexTest(schema, modules);
     await t.mutation(internal.settings.seed, {});
-    const asUser = t.withIdentity({ email: "someone@else.com" });
+    const userId = await makeUser(t, "someone@else.com");
+    const asUser = t.withIdentity({ subject: userId });
     await expect(asUser.query(api.settings.get, {})).rejects.toThrow(/not an admin/);
   });
 
   test("admin reads the seeded defaults", async () => {
     const t = convexTest(schema, modules);
     await t.mutation(internal.settings.seed, {});
-    const asAdmin = t.withIdentity({ email: "Admin@Wordcast.app" });
+    const adminId = await makeUser(t, "admin@wordcast.app");
+    const asAdmin = t.withIdentity({ subject: adminId });
     const s = await asAdmin.query(api.settings.get, {});
     expect(s?.approvalMode).toBe("auto");
     expect(s?.backgroundMusicMode).toBe("library");
@@ -50,7 +59,8 @@ describe("settings", () => {
       t.mutation(api.settings.update, { patch: { pipelinePaused: true } }),
     ).rejects.toThrow(/Unauthenticated/);
 
-    const asAdmin = t.withIdentity({ email: "admin@wordcast.app" });
+    const adminId = await makeUser(t, "admin@wordcast.app");
+    const asAdmin = t.withIdentity({ subject: adminId });
     await asAdmin.mutation(api.settings.update, { patch: { pipelinePaused: true } });
     const s = await asAdmin.query(api.settings.get, {});
     expect(s?.pipelinePaused).toBe(true);

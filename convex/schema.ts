@@ -1,3 +1,4 @@
+import { authTables } from "@convex-dev/auth/server";
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 import {
@@ -23,6 +24,9 @@ import {
  * `assets` is kept platform-independent so those slot in without migration.
  */
 export default defineSchema({
+  // Convex Auth tables (users, sessions, accounts, …).
+  ...authTables,
+
   // Single global settings row (key: "global").
   settings: defineTable({
     key: v.string(),

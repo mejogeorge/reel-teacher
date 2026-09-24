@@ -1,10 +1,11 @@
 "use client";
 
-import { UserButton } from "@clerk/nextjs";
+import { useAuthActions } from "@convex-dev/auth/react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { APP_NAME } from "@wordcast/shared";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 const NAV = [
@@ -16,6 +17,8 @@ const NAV = [
 
 export function Shell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { signOut } = useAuthActions();
   return (
     <div className="min-h-screen">
       <header className="border-b">
@@ -41,7 +44,16 @@ export function Shell({ children }: { children: ReactNode }) {
               })}
             </nav>
           </div>
-          <UserButton />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={async () => {
+              await signOut();
+              router.push("/login");
+            }}
+          >
+            Sign out
+          </Button>
         </div>
       </header>
       <main className="mx-auto max-w-5xl px-6 py-8">{children}</main>

@@ -1,5 +1,5 @@
+import { ConvexAuthNextjsServerProvider } from "@convex-dev/auth/nextjs/server";
 import type { Metadata } from "next";
-import { ClerkProvider } from "@clerk/nextjs";
 
 import { APP_NAME } from "@wordcast/shared";
 import { ConvexClientProvider } from "@/components/ConvexClientProvider";
@@ -14,12 +14,12 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <ClerkProvider>
+    <ConvexAuthNextjsServerProvider>
       <html lang="en">
         <body className="min-h-screen bg-background text-foreground antialiased">
           <ConvexClientProvider>{children}</ConvexClientProvider>
         </body>
       </html>
-    </ClerkProvider>
+    </ConvexAuthNextjsServerProvider>
   );
 }

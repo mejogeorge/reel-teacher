@@ -14,7 +14,7 @@ model is kept Phase-2-ready.
 |---|---|
 | Monorepo | pnpm workspaces + Turborepo |
 | Backend / DB / cron / storage | Convex (`@convex-dev/workflow`, `@convex-dev/rate-limiter`) |
-| Dashboard | Next.js (App Router) + shadcn/ui + Tailwind, Clerk auth |
+| Dashboard | Next.js (App Router) + shadcn/ui + Tailwind, Convex Auth (email + password) |
 | Video | Remotion (frame-driven) + `@remotion/player` preview |
 | LLM | Anthropic SDK (Claude) — word pick, content, safety |
 | Voiceover (TTS) | **Deferred** — videos are silent/text-only; voice is pluggable (see below) |
@@ -44,7 +44,7 @@ renderer worker: claim (lease) → render MP4 + thumbnail → upload → word = 
 ## Prerequisites
 
 - Node ≥ 22, pnpm 10
-- Accounts: **Convex**, **Clerk**, **Anthropic** (API key)
+- Accounts: **Convex**, and an LLM key (**Anthropic** or **Gemini**). Auth is built-in (Convex Auth).
 - For the worker: Docker (or a machine with Chromium + ffmpeg)
 
 ## Setup
@@ -56,21 +56,21 @@ pnpm install
 #    convex/_generated and writes .env.local. Leave running while developing.
 pnpm convex:dev
 
-# 2. In the Convex dashboard (Settings → Environment Variables) set:
-#    ANTHROPIC_API_KEY, ANTHROPIC_MODEL (claude-sonnet-4-6),
-#    ANTHROPIC_MODEL_FAST (claude-haiku-4-5-20251001), WORKER_SECRET,
-#    ADMIN_EMAILS (comma-separated), CLERK_JWT_ISSUER_DOMAIN
-#    (optional: WORDNIK_API_KEY). See root .env.example.
+# 2. Set up Convex Auth signing keys (email+password login, no third party):
+npx @convex-dev/auth        # sets JWT_PRIVATE_KEY, JWKS, SITE_URL on the deployment
 
-# 3. Dashboard env: cp apps/web/.env.example apps/web/.env.local and fill
-#    NEXT_PUBLIC_CONVEX_URL + Clerk keys. Then:
+# 3. In the Convex dashboard (Settings → Environment Variables) set an LLM key
+#    and admin config: GEMINI_API_KEY (or ANTHROPIC_API_KEY), WORKER_SECRET,
+#    ADMIN_EMAILS (comma-separated). Optional: WORDNIK_API_KEY. See root .env.example.
+
+# 4. Dashboard env: cp apps/web/.env.example apps/web/.env.local and set
+#    NEXT_PUBLIC_CONVEX_URL. Then:
 pnpm --filter @wordcast/web dev        # http://localhost:3000
 
-# 4. First-run seed: sign in as an admin email, open Today, click "Seed"
-#    (settings + blocklist + fallback words). Or `npx convex run admin:bootstrap`
-#    once authenticated.
+# 5. Sign up at /login with an email in ADMIN_EMAILS, then open Today and click
+#    "Seed" (settings + blocklist + fallback words).
 
-# 5. Worker env: cp apps/renderer/.env.example apps/renderer/.env and fill
+# 6. Worker env: cp apps/renderer/.env.example apps/renderer/.env and fill
 #    CONVEX_URL + WORKER_SECRET (matching the dashboard). Then:
 docker compose -f apps/renderer/docker-compose.yml up --build
 #    (or, locally: pnpm --filter @wordcast/renderer build && pnpm --filter @wordcast/renderer start)
@@ -92,7 +92,7 @@ pnpm --filter @wordcast/video studio           # interactive Remotion Studio
 ## Deploy
 
 - **Convex:** `pnpm convex:deploy` (or connect the repo in the Convex dashboard). Set prod env vars there.
-- **Dashboard (Vercel):** import `apps/web`, set `NEXT_PUBLIC_CONVEX_URL` + Clerk keys. Note: Vercel **Hobby is non-commercial** — use Pro if this becomes a business.
+- **Dashboard (Vercel):** import `apps/web`, set `NEXT_PUBLIC_CONVEX_URL`. Note: Vercel **Hobby is non-commercial** — use Pro if this becomes a business.
 - **Worker:** the `apps/renderer` Docker image on any always-on host:
   - **Local:** `docker compose -f apps/renderer/docker-compose.yml up -d` on a machine that stays awake. Missed days auto-catch-up when it reconnects.
   - **Railway / Fly.io / VPS:** deploy the Dockerfile; set `CONVEX_URL`, `WORKER_SECRET`, `WORKER_ID`.
@@ -100,7 +100,7 @@ pnpm --filter @wordcast/video studio           # interactive Remotion Studio
 ## Costs (roughly, ~1 video/day)
 
 - **Anthropic:** a few LLM calls/day (pick + content + safety) → cents/month.
-- **Convex / Clerk:** free tiers are ample at this volume.
+- **Convex:** free tier is ample at this volume.
 - **Worker host:** the only real recurring cost — free if local, ~$5–20/mo managed.
 
 ## Reliability posture (Phase 1)
@@ -112,7 +112,7 @@ pnpm --filter @wordcast/video studio           # interactive Remotion Studio
 - ✅ Lease-based job claiming + heartbeat + 5-min requeue cron; dead-letter after max attempts.
 - ✅ Fail-closed safety; `events` audit log; webhook alerts on run failure + 6h watchdog.
 - ✅ `pipelinePaused` kill switch; `@convex-dev/rate-limiter` cap on LLM spend.
-- ✅ Worker functions require `WORKER_SECRET` (constant-time); admin functions require Clerk admin.
+- ✅ Worker functions require `WORKER_SECRET` (constant-time); admin functions require a Convex Auth admin (ADMIN_EMAILS).
 
 ## Deferred in Phase 1 (pluggable / easy to add later)
 

@@ -52,14 +52,11 @@ export const convexEnvSchema = z.object({
   WORDNIK_API_KEY: z.string().optional(),
   WORKER_SECRET: z.string().min(1),
   ADMIN_EMAILS: z.string().optional(),
-  CLERK_JWT_ISSUER_DOMAIN: z.string().min(1),
 });
 export type ConvexEnv = z.infer<typeof convexEnvSchema>;
 
 /** Server-side env consumed by the Next.js dashboard. */
 export const webServerEnvSchema = z.object({
   NEXT_PUBLIC_CONVEX_URL: z.string().url(),
-  NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: z.string().min(1),
-  CLERK_SECRET_KEY: z.string().min(1),
 });
 export type WebServerEnv = z.infer<typeof webServerEnvSchema>;
