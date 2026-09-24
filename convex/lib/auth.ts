@@ -8,6 +8,10 @@ import { getAdminEmails, getWorkerSecret } from "./env";
  * Returns the normalized admin email. Throws otherwise.
  */
 export async function requireAdmin(ctx: QueryCtx | MutationCtx): Promise<string> {
+  // Dev bypass — DO NOT enable in production (opens all admin functions).
+  if (process.env.AUTH_BYPASS === "true") {
+    return "bypass@local";
+  }
   const userId = await getAuthUserId(ctx);
   if (!userId) {
     throw new Error("Unauthenticated");
