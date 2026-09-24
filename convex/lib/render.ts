@@ -12,6 +12,7 @@ const DAY_MS = 86400_000;
 export async function enqueueRenderForWord(
   ctx: MutationCtx,
   wordId: Id<"words">,
+  themeIdOverride?: string,
 ): Promise<Id<"renderJobs">> {
   const word = await ctx.db.get(wordId);
   if (!word) throw new Error("word not found");
@@ -24,7 +25,7 @@ export async function enqueueRenderForWord(
 
   const themeRotation = settings?.themeRotation?.length ? settings.themeRotation : ["minimal-light"];
   const dayIndex = Math.floor(Date.now() / DAY_MS);
-  const themeId = themeRotation[dayIndex % themeRotation.length] ?? "minimal-light";
+  const themeId = themeIdOverride ?? themeRotation[dayIndex % themeRotation.length] ?? "minimal-light";
   const brandHandle = settings?.brandHandle ?? "@wordcast";
   const backgroundMusicMode = settings?.backgroundMusicMode ?? "library";
   const maxAttempts = settings?.maxAttemptsPerStep ?? 3;

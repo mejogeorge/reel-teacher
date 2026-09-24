@@ -106,6 +106,30 @@ export const generateContent = internalAction({
   },
 });
 
+/** Full enrichment chain for a freshly-selected word (manual add / retry). */
+export const enrichWord = internalAction({
+  args: { wordId: v.id("words") },
+  handler: async (ctx, { wordId }) => {
+    const def = await ctx.runAction(internal.enrich.fetchDefinition, { wordId });
+    if (!def.ok) return { ok: false as const };
+    const content = await ctx.runAction(internal.enrich.generateContent, { wordId });
+    if (!content.ok) return { ok: false as const };
+    await ctx.runAction(internal.enrich.safetyCheck, { wordId });
+    return { ok: true as const };
+  },
+});
+
+/** Re-run content generation + safety for a word that already has a definition. */
+export const reprocess = internalAction({
+  args: { wordId: v.id("words") },
+  handler: async (ctx, { wordId }) => {
+    const content = await ctx.runAction(internal.enrich.generateContent, { wordId });
+    if (!content.ok) return { ok: false as const };
+    await ctx.runAction(internal.enrich.safetyCheck, { wordId });
+    return { ok: true as const };
+  },
+});
+
 /** Classify content safety: blocklist substring match + LLM classifier. Fail closed. */
 export const safetyCheck = internalAction({
   args: { wordId: v.id("words") },

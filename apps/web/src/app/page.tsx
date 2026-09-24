@@ -1,34 +1,112 @@
-import { currentUser } from "@clerk/nextjs/server";
-import { SignOutButton } from "@clerk/nextjs";
+"use client";
 
-import { APP_NAME } from "@wordcast/shared";
+import { useMutation, useQuery } from "convex/react";
+import { useState } from "react";
+import { Shell } from "@/components/Shell";
+import { TodayWordCard } from "@/components/TodayWordCard";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { api } from "@/lib/convexApi";
 
-export default async function HomePage() {
-  const user = await currentUser();
+const PIPELINE_STEPS = [
+  "candidate",
+  "selected",
+  "enriched",
+  "safety_passed",
+  "approved",
+  "voiced",
+  "rendering",
+  "rendered",
+] as const;
+
+async function run(action: () => Promise<unknown>) {
+  try {
+    await action();
+  } catch (err) {
+    alert(err instanceof Error ? err.message : String(err));
+  }
+}
+
+export default function TodayPage() {
+  const today = useQuery(api.getToday, {});
+  const addWord = useMutation(api.addWordManually);
+  const bootstrap = useMutation(api.bootstrap);
+  const [newWord, setNewWord] = useState("");
+  const word = today?.word ?? null;
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-2xl flex-col justify-center gap-6 p-8">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">{APP_NAME}</h1>
-        <p className="text-muted-foreground">Word-of-the-Day video pipeline · admin</p>
-      </div>
-      <div className="rounded-lg border p-6">
-        <p className="text-sm">
-          Signed in as{" "}
-          <span className="font-medium">
-            {user?.primaryEmailAddress?.emailAddress ?? "unknown"}
-          </span>
-        </p>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Dashboard pages (Today, Words, Settings) arrive in milestone M7.
-        </p>
-        <div className="mt-4">
-          <SignOutButton>
-            <Button variant="outline">Sign out</Button>
-          </SignOutButton>
+    <Shell>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold tracking-tight">Today</h1>
+        <div className="flex gap-2">
+          <input
+            value={newWord}
+            onChange={(e) => setNewWord(e.target.value)}
+            placeholder="Add a word manually"
+            className="rounded-md border px-3 py-1.5 text-sm"
+          />
+          <Button
+            variant="outline"
+            onClick={() =>
+              run(async () => {
+                await addWord({ word: newWord });
+                setNewWord("");
+              })
+            }
+          >
+            Add
+          </Button>
+          <Button variant="ghost" onClick={() => run(() => bootstrap({}))}>
+            Seed
+          </Button>
         </div>
       </div>
-    </main>
+
+      {today === undefined ? (
+        <p className="mt-8 text-muted-foreground">Connecting to Convex…</p>
+      ) : (
+        <div className="mt-6 space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Run · {today.runDate}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {today.run ? (
+                <p className="text-sm">
+                  Status: <span className="font-medium">{today.run.status}</span>
+                  {today.run.error ? <span className="text-red-600"> — {today.run.error}</span> : null}
+                </p>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  No run yet today. It starts automatically at the scheduled time, or add a word
+                  above.
+                </p>
+              )}
+              {word ? (
+                <div className="mt-4 flex flex-wrap gap-1">
+                  {PIPELINE_STEPS.map((step) => {
+                    const reached =
+                      PIPELINE_STEPS.indexOf(step) <=
+                      PIPELINE_STEPS.indexOf(word.status as (typeof PIPELINE_STEPS)[number]);
+                    return (
+                      <span
+                        key={step}
+                        className={`rounded px-2 py-0.5 text-xs ${
+                          reached ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-400"
+                        }`}
+                      >
+                        {step}
+                      </span>
+                    );
+                  })}
+                </div>
+              ) : null}
+            </CardContent>
+          </Card>
+
+          {word ? <TodayWordCard word={word} assets={today.assets} /> : null}
+        </div>
+      )}
+    </Shell>
   );
 }
