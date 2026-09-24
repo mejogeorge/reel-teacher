@@ -52,6 +52,10 @@ export const convexEnvSchema = z.object({
   WORDNIK_API_KEY: z.string().optional(),
   WORKER_SECRET: z.string().min(1),
   ADMIN_EMAILS: z.string().optional(),
+  // Instagram publishing (Phase 2). Absent = publishing disabled.
+  IG_USER_ID: z.string().optional(),
+  IG_ACCESS_TOKEN: z.string().optional(),
+  IG_GRAPH_VERSION: z.string().min(1).default("v21.0"),
 });
 export type ConvexEnv = z.infer<typeof convexEnvSchema>;
 

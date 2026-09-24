@@ -133,6 +133,26 @@ export default defineSchema({
     .index("by_wordId", ["wordId"])
     .index("by_theme", ["themeId"]),
 
+  // Phase 2: one row per publish attempt of a word's video to a platform.
+  postTargets: defineTable({
+    wordId: v.id("words"),
+    platform: v.string(), // "instagram"
+    status: v.union(
+      v.literal("pending"),
+      v.literal("publishing"),
+      v.literal("published"),
+      v.literal("failed"),
+    ),
+    renderVersion: v.number(),
+    externalId: v.optional(v.string()), // platform media id
+    permalink: v.optional(v.string()),
+    error: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_wordId", ["wordId"])
+    .index("by_status", ["status"]),
+
   // Produced media stored in Convex file storage; independent of any platform.
   assets: defineTable({
     wordId: v.id("words"),

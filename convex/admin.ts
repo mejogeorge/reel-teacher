@@ -390,6 +390,50 @@ export const setMusicActive = mutation({
   },
 });
 
+export const getPostTargets = query({
+  args: { wordId: v.id("words") },
+  handler: async (ctx, { wordId }) => {
+    await requireAdmin(ctx);
+    return ctx.db
+      .query("postTargets")
+      .withIndex("by_wordId", (q) => q.eq("wordId", wordId))
+      .order("desc")
+      .collect();
+  },
+});
+
+/** Queue a rendered word's video to be published to Instagram (manual). */
+export const publishToInstagram = mutation({
+  args: { wordId: v.id("words") },
+  handler: async (ctx, { wordId }) => {
+    await requireAdmin(ctx);
+    const word = await ctx.db.get(wordId);
+    if (!word) throw new Error("word not found");
+    if (word.status !== "rendered") throw new Error("word must be rendered before publishing");
+
+    const videos = await ctx.db
+      .query("assets")
+      .withIndex("by_wordId", (q) => q.eq("wordId", wordId))
+      .collect();
+    const latest = videos
+      .filter((a) => a.kind === "video")
+      .sort((a, b) => b.renderVersion - a.renderVersion)[0];
+    if (!latest) throw new Error("no video asset to publish");
+
+    const now = Date.now();
+    const id = await ctx.db.insert("postTargets", {
+      wordId,
+      platform: "instagram",
+      status: "pending",
+      renderVersion: latest.renderVersion,
+      createdAt: now,
+      updatedAt: now,
+    });
+    await logEvent(ctx, { wordId, type: "publish.queued", message: "Queued Instagram publish" });
+    await ctx.scheduler.runAfter(0, internal.publish.instagramPublish, { wordId, postTargetId: id });
+  },
+});
+
 /** One-time bootstrap: seed settings, blocklist and fallback words. */
 export const bootstrap = mutation({
   args: {},

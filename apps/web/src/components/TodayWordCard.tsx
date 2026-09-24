@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,8 +21,11 @@ export function TodayWordCard({ word, assets }: { word: WordDoc; assets: Asset[]
   const reject = useMutation(api.reject);
   const regenerate = useMutation(api.regenerate);
   const rerender = useMutation(api.rerender);
+  const publishToInstagram = useMutation(api.publishToInstagram);
+  const posts = useQuery(api.getPostTargets, { wordId: word._id });
 
   const videos = assets.filter((a) => a.kind === "video" && a.url);
+  const latestPost = posts?.[0];
 
   return (
     <Card>
@@ -92,7 +95,36 @@ export function TodayWordCard({ word, assets }: { word: WordDoc; assets: Asset[]
               >
                 Re-render
               </Button>
+              {word.status === "rendered" ? (
+                <Button
+                  size="sm"
+                  onClick={() => run(() => publishToInstagram({ wordId: word._id }))}
+                  disabled={latestPost?.status === "publishing" || latestPost?.status === "pending"}
+                >
+                  Publish to Instagram
+                </Button>
+              ) : null}
             </div>
+
+            {latestPost ? (
+              <p className="pt-1 text-xs">
+                <span className="text-muted-foreground">Instagram: </span>
+                {latestPost.status === "published" ? (
+                  <a
+                    href={latestPost.permalink ?? "#"}
+                    className="text-emerald-600 hover:underline"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    published{latestPost.permalink ? " ↗" : ""}
+                  </a>
+                ) : latestPost.status === "failed" ? (
+                  <span className="text-red-600">failed — {latestPost.error}</span>
+                ) : (
+                  <span className="text-purple-600">{latestPost.status}…</span>
+                )}
+              </p>
+            ) : null}
           </div>
 
           <div className="flex flex-col gap-4">

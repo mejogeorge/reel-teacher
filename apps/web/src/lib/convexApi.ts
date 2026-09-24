@@ -102,6 +102,18 @@ export interface SystemStatus {
   recentErrors: EventRow[];
 }
 
+export interface PostTarget {
+  _id: string;
+  platform: string;
+  status: "pending" | "publishing" | "published" | "failed";
+  renderVersion: number;
+  externalId?: string;
+  permalink?: string;
+  error?: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
 export type SettingsDoc = Settings & { _id: string; key: string };
 
 type NoArgs = Record<string, never>;
@@ -120,6 +132,7 @@ export const api = {
   listFallbackWords: q<NoArgs, FallbackRow[]>("admin:listFallbackWords"),
   systemStatus: q<NoArgs, SystemStatus>("admin:systemStatus"),
   getSettings: q<NoArgs, SettingsDoc | null>("settings:get"),
+  getPostTargets: q<{ wordId: string }, PostTarget[]>("admin:getPostTargets"),
 
   approveNow: m<{ wordId: string }, null>("admin:approveNow"),
   changeWord: m<{ wordId: string }, null>("admin:changeWord"),
@@ -146,6 +159,7 @@ export const api = {
     null
   >("admin:addMusicTrack"),
   setMusicActive: m<{ trackId: string; active: boolean }, null>("admin:setMusicActive"),
+  publishToInstagram: m<{ wordId: string }, null>("admin:publishToInstagram"),
   updateSettings: m<{ patch: Partial<Settings> }, null>("settings:update"),
   bootstrap: m<NoArgs, null>("admin:bootstrap"),
 };
