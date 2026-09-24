@@ -38,6 +38,9 @@
     ]
   },
   "dependencies": {
-    "@wordcast/shared": "workspace:*"
+    "@anthropic-ai/sdk": "^0.128.0",
+    "@wordcast/shared": "workspace:*",
+    "fast-xml-parser": "^5.11.1",
+    "naughty-words": "^1.2.0"
   }
 }
