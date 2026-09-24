@@ -1,0 +1,19 @@
+# Run the renderer worker locally.
+#   cp apps/renderer/.env.example apps/renderer/.env  (fill in values)
+#   docker compose -f apps/renderer/docker-compose.yml up --build
+services:
+  renderer:
+    build:
+      context: ../..
+      dockerfile: apps/renderer/Dockerfile
+    env_file:
+      - .env
+    restart: unless-stopped
+    # Chromium needs a larger /dev/shm than the default 64MB.
+    shm_size: "1gb"
+    volumes:
+      # Persist the Remotion browser + bundle cache across restarts.
+      - renderer-cache:/app/node_modules/.remotion
+
+volumes:
+  renderer-cache:

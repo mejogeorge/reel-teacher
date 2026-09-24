@@ -2,10 +2,14 @@ import { z } from "zod";
 import { wordContentSchema } from "./content.js";
 import { backgroundMusicModeSchema } from "./domain.js";
 
-/** One voiced narration segment: a key matching a scene, its audio src, and duration. */
+/**
+ * One narration segment: a key matching a scene and its duration. `src` is the
+ * audio file when TTS is enabled; when TTS is skipped the segment carries timing
+ * only (no audio) and the scene renders silent.
+ */
 export const voiceSegmentSchema = z.object({
   key: z.string().min(1),
-  src: z.string().min(1),
+  src: z.string().min(1).optional(),
   durationSec: z.number().positive(),
 });
 
