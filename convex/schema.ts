@@ -1,16 +1,160 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
+import {
+  approvalModeValidator,
+  assetKindValidator,
+  backgroundMusicModeValidator,
+  dictionaryResultValidator,
+  eventLevelValidator,
+  pipelineRunStatusValidator,
+  renderJobStatusValidator,
+  safetyValidator,
+  videoInputPropsValidator,
+  wordContentValidator,
+  wordOriginValidator,
+  wordStatusValidator,
+} from "./lib/validators";
 
 /**
- * Placeholder schema. The full data model (settings, pipelineRuns, words,
- * renderJobs, assets, events, etc.) is defined in milestone M1.
+ * WordCast data model (Phase 1).
  *
- * Phase 2 note: `accounts` and `postTargets` tables (for publishing to
- * Instagram/Facebook/YouTube) will be added later; keep `assets` independent
- * of any platform so they slot in cleanly.
+ * Phase 2 note: publishing tables — `accounts` and
+ * `postTargets(wordId, accountId, platform, status, ...)` — will be added later.
+ * `assets` is kept platform-independent so those slot in without migration.
  */
 export default defineSchema({
+  // Single global settings row (key: "global").
   settings: defineTable({
     key: v.string(),
+    approvalMode: approvalModeValidator,
+    autoApproveDelayMinutes: v.number(),
+    dailyRunHourUtc: v.number(),
+    dailyRunMinuteUtc: v.number(),
+    enabledSources: v.array(v.string()),
+    defaultVoice: v.string(),
+    themeRotation: v.array(v.string()),
+    backgroundMusicMode: backgroundMusicModeValidator,
+    maxAttemptsPerStep: v.number(),
+    pipelinePaused: v.boolean(),
+    alertWebhookUrl: v.optional(v.string()),
   }).index("by_key", ["key"]),
+
+  // One row per daily run; idempotent by runDate (YYYY-MM-DD).
+  pipelineRuns: defineTable({
+    runDate: v.string(),
+    status: pipelineRunStatusValidator,
+    wordId: v.optional(v.id("words")),
+    workflowId: v.optional(v.string()),
+    error: v.optional(v.string()),
+    startedAt: v.number(),
+    finishedAt: v.optional(v.number()),
+  }).index("by_runDate", ["runDate"]),
+
+  // Rolling per-term counts for trend scoring.
+  termStats: defineTable({
+    term: v.string(),
+    date: v.string(),
+    docCount: v.number(),
+    sourceCount: v.number(),
+  }).index("by_term_date", ["term", "date"]),
+
+  // Scored candidate terms for a run (rarity assigned by the LLM, not a frequency table).
+  candidates: defineTable({
+    runDate: v.string(),
+    term: v.string(),
+    score: v.number(),
+    rarity: v.optional(v.number()),
+    sampleContext: v.string(),
+    sourceIds: v.array(v.string()),
+  }).index("by_runDate", ["runDate"]),
+
+  // The central pipeline entity — one row per word.
+  words: defineTable({
+    slug: v.string(),
+    word: v.string(),
+    status: wordStatusValidator,
+    origin: wordOriginValidator,
+    runId: v.optional(v.id("pipelineRuns")),
+    definition: v.optional(dictionaryResultValidator),
+    content: v.optional(wordContentValidator),
+    safety: v.optional(safetyValidator),
+    themeId: v.optional(v.string()),
+    approvedAt: v.optional(v.number()),
+    rejectedReason: v.optional(v.string()),
+    error: v.optional(
+      v.object({ step: v.string(), message: v.string(), at: v.number() }),
+    ),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_status", ["status"])
+    .index("by_slug", ["slug"])
+    .index("by_createdAt", ["createdAt"]),
+
+  // Render jobs claimed by the worker via lease; keyed by word + renderVersion.
+  renderJobs: defineTable({
+    wordId: v.id("words"),
+    status: renderJobStatusValidator,
+    attempts: v.number(),
+    maxAttempts: v.number(),
+    claimedBy: v.optional(v.string()),
+    leaseExpiresAt: v.optional(v.number()),
+    inputProps: videoInputPropsValidator,
+    renderVersion: v.number(),
+    error: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_status", ["status"])
+    .index("by_wordId", ["wordId"]),
+
+  // Produced media stored in Convex file storage; independent of any platform.
+  assets: defineTable({
+    wordId: v.id("words"),
+    kind: assetKindValidator,
+    storageId: v.id("_storage"),
+    durationSec: v.optional(v.number()),
+    width: v.optional(v.number()),
+    height: v.optional(v.number()),
+    bytes: v.number(),
+    themeId: v.string(),
+    renderVersion: v.number(),
+  }).index("by_wordId", ["wordId"]),
+
+  // Royalty-free background music tracks (uploaded or auto-sourced).
+  musicTracks: defineTable({
+    title: v.string(),
+    storageId: v.id("_storage"),
+    durationSec: v.number(),
+    source: v.string(),
+    licenseUrl: v.string(),
+    attributionText: v.optional(v.string()),
+    active: v.boolean(),
+    mood: v.optional(v.string()),
+  }).index("by_active", ["active"]),
+
+  // Curated fallback words (used least-recently when trending finds nothing).
+  fallbackWords: defineTable({
+    word: v.string(),
+    lastUsedAt: v.optional(v.number()),
+  }).index("by_used", ["lastUsedAt"]),
+
+  // Blocked terms for safety pre-filtering.
+  blocklist: defineTable({
+    term: v.string(),
+    reason: v.optional(v.string()),
+  }).index("by_term", ["term"]),
+
+  // Append-only audit log.
+  events: defineTable({
+    wordId: v.optional(v.id("words")),
+    runId: v.optional(v.id("pipelineRuns")),
+    type: v.string(),
+    message: v.string(),
+    data: v.optional(v.any()),
+    level: eventLevelValidator,
+    createdAt: v.number(),
+  })
+    .index("by_wordId", ["wordId"])
+    .index("by_createdAt", ["createdAt"]),
 });

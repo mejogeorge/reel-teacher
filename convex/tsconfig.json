@@ -9,8 +9,9 @@
     "allowJs": true,
     "isolatedModules": true,
     "noEmit": true,
-    "jsx": "react-jsx"
+    "jsx": "react-jsx",
+    "types": ["vite/client"]
   },
   "include": ["./**/*"],
-  "exclude": ["./_generated"]
+  "exclude": ["node_modules"]
 }

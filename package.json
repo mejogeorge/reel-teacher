@@ -15,16 +15,29 @@
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\"",
     "convex:dev": "convex dev",
-    "convex:deploy": "convex deploy"
+    "convex:deploy": "convex deploy",
+    "codegen": "convex codegen",
+    "typecheck:convex": "pnpm --filter @wordcast/shared build && tsc -p convex/tsconfig.json --noEmit",
+    "test:convex": "pnpm --filter @wordcast/shared build && vitest run"
   },
   "devDependencies": {
+    "@edge-runtime/vm": "^5.0.0",
     "@wordcast/config": "workspace:*",
     "convex": "^1.17.4",
+    "convex-test": "^0.0.59",
     "prettier": "^3.4.2",
     "turbo": "^2.5.8",
-    "typescript": "^5.7.3"
+    "typescript": "^5.7.3",
+    "vitest": "^2.1.9"
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["esbuild", "unrs-resolver", "@clerk/shared"]
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "unrs-resolver",
+      "@clerk/shared"
+    ]
+  },
+  "dependencies": {
+    "@wordcast/shared": "workspace:*"
   }
 }
