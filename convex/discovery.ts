@@ -25,16 +25,23 @@ export const discoverCandidates = internalAction({
     const blocklist = new Set(await ctx.runQuery(internal.discoveryData.getBlocklistTerms, {}));
     const extracts = extractTerms(docs, { blocklist });
 
+    // Bound the working set to the most-mentioned terms before history lookup +
+    // scoring (keeps DB queries and the returned averages map within Convex limits).
+    const working = [...extracts]
+      .sort((a, b) => b.docCount - a.docCount)
+      .slice(0, MAX_TERM_STATS_PER_RUN);
+
     const avg = await ctx.runQuery(internal.discoveryData.getHistoryAverages, {
-      terms: extracts.map((e) => e.term),
+      terms: working.map((e) => e.term),
       runDate,
     });
-    const ranked = rankCandidates(extracts, avg, 50);
+    const ranked = rankCandidates(working, avg, 50);
 
-    const todayStats = [...extracts]
-      .sort((a, b) => b.docCount - a.docCount)
-      .slice(0, MAX_TERM_STATS_PER_RUN)
-      .map((e) => ({ term: e.term, docCount: e.docCount, sourceCount: e.sourceIds.length }));
+    const todayStats = working.map((e) => ({
+      term: e.term,
+      docCount: e.docCount,
+      sourceCount: e.sourceIds.length,
+    }));
 
     await ctx.runMutation(internal.discoveryData.storeCandidates, {
       runDate,
