@@ -103,22 +103,20 @@ const WordScene: React.FC<SceneProps> = ({ content, theme }) => {
 };
 
 const MeaningScene: React.FC<SceneProps> = ({ content, theme }) => {
-  const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
-  const text = content.simpleMeaning;
-  const revealFrames = fps * 2;
-  const shownCount = Math.floor(
-    interpolate(frame, [0, revealFrames], [0, text.length], {
-      extrapolateLeft: "clamp",
-      extrapolateRight: "clamp",
-    }),
-  );
+  const s = useEnter();
   return (
     <SceneFrame theme={theme}>
-      <div style={{ fontSize: 40, color: theme.muted, marginBottom: 24 }}>meaning</div>
-      <div style={{ fontSize: 72, fontWeight: 600, lineHeight: 1.3 }}>
-        {text.slice(0, shownCount)}
-        <span style={{ opacity: frame % fps < fps / 2 ? 1 : 0 }}>|</span>
+      <div style={{ fontSize: 40, color: theme.muted, marginBottom: 24, opacity: s }}>meaning</div>
+      <div
+        style={{
+          opacity: s,
+          transform: `translateY(${interpolate(s, [0, 1], [30, 0])}px)`,
+          fontSize: 72,
+          fontWeight: 600,
+          lineHeight: 1.3,
+        }}
+      >
+        {content.simpleMeaning}
       </div>
     </SceneFrame>
   );
