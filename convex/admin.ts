@@ -194,6 +194,48 @@ export const reject = mutation({
   },
 });
 
+/**
+ * Discard the current word (even if already approved) and pick a different one,
+ * running it through the same flow. Cancels any pending render for the old word.
+ */
+export const changeWord = mutation({
+  args: { wordId: v.id("words") },
+  handler: async (ctx, { wordId }) => {
+    await requireAdmin(ctx);
+    const word = await ctx.db.get(wordId);
+    if (!word) throw new Error("word not found");
+    const now = Date.now();
+
+    // Admin override: discard from whatever state it's in.
+    await ctx.db.patch(wordId, {
+      status: "rejected",
+      rejectedReason: "changed by admin",
+      updatedAt: now,
+    });
+
+    // Cancel any pending/in-flight render so the worker doesn't render a discarded word.
+    const jobs = await ctx.db
+      .query("renderJobs")
+      .withIndex("by_wordId", (q) => q.eq("wordId", wordId))
+      .collect();
+    for (const j of jobs) {
+      if (j.status === "queued" || j.status === "claimed" || j.status === "rendering") {
+        await ctx.db.patch(j._id, { status: "failed", error: "word changed by admin", updatedAt: now });
+      }
+    }
+
+    await logEvent(ctx, {
+      wordId,
+      type: "word.changed",
+      message: "Admin changed the word — picking a replacement",
+      level: "warn",
+    });
+
+    // Pick + enrich a replacement, linked to the same run (auto-approves per settings).
+    await ctx.scheduler.runAfter(0, internal.pipeline.rerollWord, { runId: word.runId });
+  },
+});
+
 /** Admin override: reset a word so content is regenerated (bypasses forward-only rules). */
 export const regenerate = mutation({
   args: { wordId: v.id("words") },

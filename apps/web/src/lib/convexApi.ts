@@ -122,6 +122,7 @@ export const api = {
   getSettings: q<NoArgs, SettingsDoc | null>("settings:get"),
 
   approveNow: m<{ wordId: string }, null>("admin:approveNow"),
+  changeWord: m<{ wordId: string }, null>("admin:changeWord"),
   reject: m<{ wordId: string; reason: string }, null>("admin:reject"),
   regenerate: m<{ wordId: string }, null>("admin:regenerate"),
   rerender: m<{ wordId: string; themeId?: string }, null>("admin:rerender"),

@@ -69,6 +69,25 @@ export const linkRunWord = internalMutation({
   },
 });
 
+/**
+ * Pick a replacement word (from the curated fallback list, LRU) and enrich it
+ * end-to-end, rotating on failure. Used by the dashboard "Change word" action.
+ */
+export const rerollWord = internalAction({
+  args: { runId: v.optional(v.id("pipelineRuns")) },
+  handler: async (ctx, { runId }): Promise<{ wordId: Id<"words"> }> => {
+    for (let attempt = 0; attempt < MAX_WORD_ATTEMPTS; attempt++) {
+      const picked = await ctx.runMutation(internal.pickData.useFallbackWord, { runId });
+      const enriched = await ctx.runAction(internal.enrich.enrichWord, { wordId: picked.wordId });
+      if (enriched.ok) {
+        if (runId) await ctx.runMutation(internal.pipeline.linkRunWord, { runId, wordId: picked.wordId });
+        return { wordId: picked.wordId };
+      }
+    }
+    throw new Error(`Change word: no replacement could be enriched after ${MAX_WORD_ATTEMPTS} attempts`);
+  },
+});
+
 /** Called by the workflow component when the run finishes (success/failure/cancel). */
 export const onRunComplete = internalMutation({
   args: { workflowId: v.string(), result: v.any(), context: v.any() },

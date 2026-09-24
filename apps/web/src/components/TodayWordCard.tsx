@@ -17,6 +17,7 @@ async function run(action: () => Promise<unknown>) {
 
 export function TodayWordCard({ word, assets }: { word: WordDoc; assets: Asset[] }) {
   const approveNow = useMutation(api.approveNow);
+  const changeWord = useMutation(api.changeWord);
   const reject = useMutation(api.reject);
   const regenerate = useMutation(api.regenerate);
   const rerender = useMutation(api.rerender);
@@ -62,6 +63,13 @@ export function TodayWordCard({ word, assets }: { word: WordDoc; assets: Asset[]
             <div className="flex flex-wrap gap-2 pt-3">
               <Button size="sm" onClick={() => run(() => approveNow({ wordId: word._id }))}>
                 Approve now
+              </Button>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => run(() => changeWord({ wordId: word._id }))}
+              >
+                Change word
               </Button>
               <Button
                 size="sm"
