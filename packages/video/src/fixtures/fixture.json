@@ -1,0 +1,36 @@
+{
+  "themeId": "minimal-light",
+  "brandHandle": "@wordcast",
+  "content": {
+    "word": "ephemeral",
+    "phonetic": "/ɪˈfɛm(ə)rəl/",
+    "partOfSpeech": "adjective",
+    "simpleMeaning": "Lasting for only a very short time.",
+    "examples": [
+      "The morning mist was ephemeral, gone by nine.",
+      "Online fame is often ephemeral."
+    ],
+    "synonyms": ["fleeting", "transient", "momentary"],
+    "funFact": "From Greek 'ephemeros', meaning 'lasting only a day'.",
+    "narration": {
+      "hook": "Here's a word you keep seeing everywhere:",
+      "word": "Ephemeral, said uh-FEM-er-ul.",
+      "meaning": "It means lasting for only a very short time.",
+      "examples": ["The morning mist was ephemeral, gone by nine."],
+      "outro": "Follow for a new word every day!"
+    },
+    "caption": "Word of the day: ephemeral — lasting for only a very short time.",
+    "hashtags": ["english", "vocabulary", "wordoftheday", "learnenglish", "ielts", "englishtips"]
+  },
+  "voice": {
+    "segments": [
+      { "key": "hook", "src": "silence.wav", "durationSec": 2.2 },
+      { "key": "word", "src": "silence.wav", "durationSec": 3.0 },
+      { "key": "meaning", "src": "silence.wav", "durationSec": 3.4 },
+      { "key": "example-0", "src": "silence.wav", "durationSec": 3.2 },
+      { "key": "example-1", "src": "silence.wav", "durationSec": 3.0 },
+      { "key": "outro", "src": "silence.wav", "durationSec": 2.6 }
+    ]
+  },
+  "showSafeArea": false
+}

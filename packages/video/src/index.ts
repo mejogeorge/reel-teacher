@@ -1,9 +1,12 @@
 import { VIDEO_FPS, VIDEO_HEIGHT, VIDEO_WIDTH } from "@wordcast/shared";
 
-/**
- * Placeholder for the Remotion compositions built in M5.
- * Exported now to validate the shared -> video dependency graph.
- */
+// Side-effect-free exports (safe to import from Node — no font loading).
+export * from "./timeline";
+export { fixtureProps } from "./fixtures/sample-props";
+
+/** Remotion composition id. */
+export const WORD_VIDEO_ID = "WordVideo";
+
 export const videoDimensions = {
   width: VIDEO_WIDTH,
   height: VIDEO_HEIGHT,

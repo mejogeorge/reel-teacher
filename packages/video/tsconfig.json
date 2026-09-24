@@ -2,7 +2,10 @@
   "extends": "@wordcast/config/tsconfig.base.json",
   "compilerOptions": {
     "outDir": "dist",
-    "rootDir": "src"
+    "rootDir": "src",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
+    "types": ["react", "react-dom"]
   },
   "include": ["src/**/*"]
 }

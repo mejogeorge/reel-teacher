@@ -9,18 +9,32 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./remotion": {
+      "types": "./dist/remotion.d.ts",
+      "default": "./dist/remotion.js"
     }
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint .",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run --passWithNoTests",
+    "studio": "remotion studio src/entry.ts",
+    "render:fixture": "remotion render src/entry.ts WordVideo out/fixture.mp4 --props=src/fixtures/fixture.json",
+    "still:fixture": "remotion still src/entry.ts WordVideo out/fixture.png --props=src/fixtures/fixture.json --frame=90"
   },
   "dependencies": {
-    "@wordcast/shared": "workspace:*"
+    "@remotion/cli": "^4.0.528",
+    "@remotion/google-fonts": "^4.0.528",
+    "@wordcast/shared": "workspace:*",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "remotion": "^4.0.528"
   },
   "devDependencies": {
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
     "@wordcast/config": "workspace:*",
     "eslint": "^9.18.0",
     "typescript": "^5.7.3",
