@@ -71,7 +71,7 @@ export const dictionaryResultValidator = v.object({
     }),
   ),
   origin: v.optional(v.string()),
-  source: v.union(v.literal("dictionaryapi"), v.literal("wordnik")),
+  source: v.union(v.literal("dictionaryapi"), v.literal("wordnik"), v.literal("llm")),
 });
 
 export const wordContentValidator = v.object({

@@ -14,7 +14,7 @@ export const dictionaryResultSchema = z.object({
   definitions: z.array(dictionaryDefinitionSchema).min(1),
   /** Etymology, only when the source actually provides it. */
   origin: z.string().optional(),
-  source: z.enum(["dictionaryapi", "wordnik"]),
+  source: z.enum(["dictionaryapi", "wordnik", "llm"]),
 });
 
 export type DictionaryResult = z.infer<typeof dictionaryResultSchema>;

@@ -1,6 +1,6 @@
 import { assertTransition, isTerminal, type WordStatus } from "@wordcast/shared";
 import { v } from "convex/values";
-import { internalMutation, mutation, query } from "./_generated/server";
+import { internalMutation, internalQuery, mutation, query } from "./_generated/server";
 import { requireWorker } from "./lib/auth";
 import { logEvent } from "./lib/events";
 
@@ -30,6 +30,18 @@ export const claimNextJob = mutation({
       renderVersion: job.renderVersion,
       request: job.request,
     };
+  },
+});
+
+/** Internal: signed URLs for a word's assets (used for CLI verification/debug). */
+export const assetUrls = internalQuery({
+  args: { wordId: v.id("words") },
+  handler: async (ctx, { wordId }) => {
+    const rows = await ctx.db
+      .query("assets")
+      .withIndex("by_wordId", (q) => q.eq("wordId", wordId))
+      .collect();
+    return Promise.all(rows.map(async (a) => ({ kind: a.kind, url: await ctx.storage.getUrl(a.storageId) })));
   },
 });
 

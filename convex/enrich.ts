@@ -2,7 +2,9 @@
 
 import {
   buildContentPrompt,
+  buildDefinitionPrompt,
   buildSafetyPrompt,
+  llmDefinitionSchema,
   normalizeDictionaryApiResponse,
   normalizeWordnikResponse,
   safetyClassificationSchema,
@@ -12,42 +14,70 @@ import {
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { internalAction } from "./_generated/server";
-import { callClaudeValidated } from "./lib/anthropic";
-import { convexEnv } from "./lib/env";
+import { activeModel, callLLMValidated } from "./lib/llm";
 import { rateLimiter } from "./lib/ratelimit";
 
-const DICT_TIMEOUT_MS = 10_000;
+const DICT_TIMEOUT_MS = 20_000;
 
-async function fetchDictionary(word: string): Promise<DictionaryResult | null> {
+const FETCH_HEADERS = { "user-agent": "WordCast/1.0 (+https://github.com/wordcast)", accept: "application/json" };
+
+/**
+ * Resolve a definition: dictionaryapi.dev (source of truth) → Wordnik (if key) →
+ * LLM fallback (the free dictionary API is slow/unreliable from server egress).
+ */
+async function fetchDictionary(word: string): Promise<{ def: DictionaryResult | null; diag: string }> {
+  // 1. dictionaryapi.dev
   try {
     const res = await fetch(
       `https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word)}`,
-      { signal: AbortSignal.timeout(DICT_TIMEOUT_MS) },
+      { signal: AbortSignal.timeout(DICT_TIMEOUT_MS), headers: FETCH_HEADERS },
     );
     if (res.ok) {
       const norm = normalizeDictionaryApiResponse(await res.json());
-      if (norm) return norm;
+      if (norm) return { def: norm, diag: "ok" };
     }
   } catch {
-    // fall through to Wordnik
+    // continue to next source
   }
 
+  // 2. Wordnik (if configured)
   const key = process.env.WORDNIK_API_KEY;
   if (key) {
     try {
       const res = await fetch(
         `https://api.wordnik.com/v4/word.json/${encodeURIComponent(word)}/definitions?limit=10&api_key=${key}`,
-        { signal: AbortSignal.timeout(DICT_TIMEOUT_MS) },
+        { signal: AbortSignal.timeout(DICT_TIMEOUT_MS), headers: FETCH_HEADERS },
       );
       if (res.ok) {
         const norm = normalizeWordnikResponse(await res.json(), word);
-        if (norm) return norm;
+        if (norm) return { def: norm, diag: "ok (wordnik)" };
       }
     } catch {
-      // fall through to null
+      // continue to LLM fallback
     }
   }
-  return null;
+
+  // 3. LLM fallback
+  const llm = await callLLMValidated(buildDefinitionPrompt(word), llmDefinitionSchema, {
+    maxTokens: 900,
+    retries: 1,
+  });
+  if (llm.ok) {
+    const def: DictionaryResult = {
+      word: llm.data.word,
+      phonetic: llm.data.phonetic,
+      origin: llm.data.origin,
+      source: "llm",
+      definitions: llm.data.definitions.map((d) => ({
+        partOfSpeech: d.partOfSpeech,
+        definition: d.definition,
+        example: d.example,
+        synonyms: d.synonyms ?? [],
+      })),
+    };
+    return { def, diag: "ok (llm)" };
+  }
+  return { def: null, diag: `all sources failed; llm: ${llm.error}` };
 }
 
 /** Look up and store a dictionary definition (dictionaryapi.dev, Wordnik fallback). */
@@ -57,12 +87,12 @@ export const fetchDefinition = internalAction({
     const word = await ctx.runQuery(internal.enrichData.getWord, { wordId });
     if (!word) throw new Error("word not found");
 
-    const def = await fetchDictionary(word.word);
+    const { def, diag } = await fetchDictionary(word.word);
     if (!def) {
       await ctx.runMutation(internal.enrichData.markFailed, {
         wordId,
         step: "fetchDefinition",
-        message: `No definition found for "${word.word}"`,
+        message: `No definition for "${word.word}" (${diag})`,
       });
       return { ok: false as const };
     }
@@ -87,7 +117,7 @@ export const generateContent = internalAction({
     }
 
     await rateLimiter.limit(ctx, "llm", { throws: true });
-    const result = await callClaudeValidated(
+    const result = await callLLMValidated(
       buildContentPrompt(word.definition),
       wordContentSchema,
       { maxTokens: 2000, retries: 1 },
@@ -152,9 +182,9 @@ export const safetyCheck = internalAction({
     }
 
     // 2. LLM classification — fail closed on any error.
-    const model = convexEnv().ANTHROPIC_MODEL_FAST;
+    const model = activeModel(true);
     await rateLimiter.limit(ctx, "llm", { throws: true });
-    const result = await callClaudeValidated(
+    const result = await callLLMValidated(
       buildSafetyPrompt(word.word, contentText),
       safetyClassificationSchema,
       { fast: true, maxTokens: 500, retries: 1 },

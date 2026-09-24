@@ -37,11 +37,18 @@ export const rendererEnvSchema = z.object({
 });
 export type RendererEnv = z.infer<typeof rendererEnvSchema>;
 
-/** Convex-side env (set in the Convex dashboard). */
+/**
+ * Convex-side env (set in the Convex dashboard). The LLM provider is chosen at
+ * runtime: Anthropic if ANTHROPIC_API_KEY is set, else Gemini if GEMINI_API_KEY
+ * is set. At least one must be present for the pipeline's LLM steps.
+ */
 export const convexEnvSchema = z.object({
-  ANTHROPIC_API_KEY: z.string().min(1),
+  ANTHROPIC_API_KEY: z.string().optional(),
   ANTHROPIC_MODEL: z.string().min(1).default("claude-sonnet-4-6"),
   ANTHROPIC_MODEL_FAST: z.string().min(1).default("claude-haiku-4-5-20251001"),
+  GEMINI_API_KEY: z.string().optional(),
+  GEMINI_MODEL: z.string().min(1).default("gemini-flash-lite-latest"),
+  GEMINI_MODEL_FAST: z.string().min(1).default("gemini-flash-lite-latest"),
   WORDNIK_API_KEY: z.string().optional(),
   WORKER_SECRET: z.string().min(1),
   ADMIN_EMAILS: z.string().optional(),

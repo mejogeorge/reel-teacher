@@ -5,7 +5,7 @@ import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { internalAction } from "./_generated/server";
-import { callClaudeJSON } from "./lib/anthropic";
+import { callLLMJSON } from "./lib/llm";
 import { rateLimiter } from "./lib/ratelimit";
 
 interface Candidate {
@@ -52,7 +52,7 @@ export const pickWord = internalAction({
     if (candidates.length > 0) {
       try {
         await rateLimiter.limit(ctx, "llm", { throws: true });
-        const raw = await callClaudeJSON(buildPickPrompt(candidates.slice(0, 40)), {
+        const raw = await callLLMJSON(buildPickPrompt(candidates.slice(0, 40)), {
           maxTokens: 1500,
         });
         const parsed = pickWordResultSchema.safeParse(raw);

@@ -91,6 +91,41 @@ export function normalizeWordnikResponse(raw: unknown, word: string): Dictionary
   return { word, definitions, source: "wordnik" };
 }
 
+// --- LLM definition fallback ----------------------------------------------------
+
+/** Shape the LLM returns for a definition (source is attached as "llm" by the caller). */
+export const llmDefinitionSchema = z.object({
+  word: z.string(),
+  phonetic: z.string().optional(),
+  definitions: z
+    .array(
+      z.object({
+        partOfSpeech: z.string(),
+        definition: z.string(),
+        example: z.string().optional(),
+        synonyms: z.array(z.string()).default([]),
+      }),
+    )
+    .min(1),
+  origin: z.string().optional(),
+});
+
+export type LlmDefinition = z.infer<typeof llmDefinitionSchema>;
+
+/** Prompt for an LLM to define a word (used when the dictionary API is unavailable). */
+export function buildDefinitionPrompt(word: string): string {
+  return [
+    `Define the English word "${word}" accurately (standard dictionary senses only — do not invent).`,
+    "Respond with JSON only, no prose or code fences:",
+    "{",
+    `  "word": "${word}",`,
+    `  "phonetic": "<IPA or simple respelling>",`,
+    `  "definitions": [{ "partOfSpeech": "<pos>", "definition": "<clear definition>", "example": "<natural sentence>", "synonyms": ["<0-4>"] }],`,
+    `  "origin": "<brief etymology if well known, else omit>"`,
+    "}",
+  ].join("\n");
+}
+
 // --- Prompt builders ------------------------------------------------------------
 
 /**
