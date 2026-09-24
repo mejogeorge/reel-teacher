@@ -113,9 +113,15 @@ async function callGemini(prompt: string, opts: CallOpts): Promise<string> {
       const reason = candidate?.finishReason ?? data.promptFeedback?.blockReason ?? "empty response";
       throw new Error(`Gemini returned no text (${reason})`);
     }
+    const retryAfter = Number(res.headers.get("retry-after"));
     lastError = `Gemini ${res.status}: ${(await res.text()).slice(0, 200)}`;
     if (res.status !== 503 && res.status !== 429) throw new Error(lastError);
-    await sleep(1500 * (attempt + 1));
+    // Honor Retry-After (seconds) when present, capped; else exponential-ish backoff.
+    const backoffMs =
+      Number.isFinite(retryAfter) && retryAfter > 0
+        ? Math.min(retryAfter * 1000, 15_000)
+        : 1500 * (attempt + 1);
+    await sleep(backoffMs);
   }
   throw new Error(lastError);
 }

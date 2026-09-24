@@ -9,6 +9,8 @@ import { logEvent } from "./lib/events";
 const RETRY = { maxAttempts: 3, initialBackoffMs: 2000, base: 2 };
 const WATCHDOG_HOURS = 6;
 const CATCHUP_DAYS = 2;
+/** How many different words to try before failing the run (rotates on enrichment failure). */
+const MAX_WORD_ATTEMPTS = 5;
 
 export const workflow = new WorkflowManager(components.workflow, {
   workpoolOptions: {
@@ -27,22 +29,36 @@ export const pipelineWorkflow = workflow.define({
   args: { runId: v.id("pipelineRuns"), runDate: v.string() },
   handler: async (step, { runId, runDate }): Promise<{ wordId: Id<"words"> }> => {
     await step.runAction(internal.discovery.discoverCandidates, { runDate });
-    const picked = await step.runAction(internal.pick.pickWord, { runDate, runId });
 
-    const def = await step.runAction(internal.enrich.fetchDefinition, { wordId: picked.wordId });
-    if (!def.ok) throw new Error("fetchDefinition failed");
+    // Try a word end-to-end (definition → content → safety). If enrichment fails
+    // (e.g. the LLM is overloaded, or no definition), rotate to another word: the
+    // first attempt uses the trending pick, the rest draw from the curated
+    // fallback list (LRU, so each is different). enrichWord marks failed words.
+    let chosenWordId: Id<"words"> | null = null;
+    for (let attempt = 0; attempt < MAX_WORD_ATTEMPTS; attempt++) {
+      const picked =
+        attempt === 0
+          ? await step.runAction(internal.pick.pickWord, { runDate, runId })
+          : await step.runMutation(internal.pickData.useFallbackWord, { runId });
 
-    const content = await step.runAction(internal.enrich.generateContent, {
-      wordId: picked.wordId,
-    });
-    if (!content.ok) throw new Error("generateContent failed");
+      const enriched = await step.runAction(internal.enrich.enrichWord, {
+        wordId: picked.wordId,
+      });
+      if (enriched.ok) {
+        chosenWordId = picked.wordId;
+        break;
+      }
+    }
 
-    await step.runAction(internal.enrich.safetyCheck, { wordId: picked.wordId });
-    await step.runMutation(internal.pipeline.linkRunWord, { runId, wordId: picked.wordId });
+    if (!chosenWordId) {
+      throw new Error(`No word could be enriched after ${MAX_WORD_ATTEMPTS} attempts`);
+    }
+
+    await step.runMutation(internal.pipeline.linkRunWord, { runId, wordId: chosenWordId });
 
     // Approval + render enqueue happen via the (auto-scheduled or manual) approve
     // mutation, so the workflow does not block on manual approval.
-    return { wordId: picked.wordId };
+    return { wordId: chosenWordId };
   },
 });
 
