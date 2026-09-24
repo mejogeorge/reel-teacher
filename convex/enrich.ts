@@ -13,7 +13,7 @@ import {
 } from "@wordcast/shared";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
-import { internalAction } from "./_generated/server";
+import { internalAction, type ActionCtx } from "./_generated/server";
 import { activeModel, callLLMValidated } from "./lib/llm";
 import { rateLimiter } from "./lib/ratelimit";
 
@@ -25,7 +25,10 @@ const FETCH_HEADERS = { "user-agent": "WordCast/1.0 (+https://github.com/wordcas
  * Resolve a definition: dictionaryapi.dev (source of truth) → Wordnik (if key) →
  * LLM fallback (the free dictionary API is slow/unreliable from server egress).
  */
-async function fetchDictionary(word: string): Promise<{ def: DictionaryResult | null; diag: string }> {
+async function fetchDictionary(
+  ctx: ActionCtx,
+  word: string,
+): Promise<{ def: DictionaryResult | null; diag: string }> {
   // 1. dictionaryapi.dev
   try {
     const res = await fetch(
@@ -57,7 +60,8 @@ async function fetchDictionary(word: string): Promise<{ def: DictionaryResult | 
     }
   }
 
-  // 3. LLM fallback
+  // 3. LLM fallback — gated by the same rate limiter as every other LLM call.
+  await rateLimiter.limit(ctx, "llm", { throws: true });
   const llm = await callLLMValidated(buildDefinitionPrompt(word), llmDefinitionSchema, {
     maxTokens: 900,
     retries: 1,
@@ -87,7 +91,7 @@ export const fetchDefinition = internalAction({
     const word = await ctx.runQuery(internal.enrichData.getWord, { wordId });
     if (!word) throw new Error("word not found");
 
-    const { def, diag } = await fetchDictionary(word.word);
+    const { def, diag } = await fetchDictionary(ctx, word.word);
     if (!def) {
       await ctx.runMutation(internal.enrichData.markFailed, {
         wordId,

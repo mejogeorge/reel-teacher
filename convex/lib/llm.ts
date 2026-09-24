@@ -67,10 +67,12 @@ async function callAnthropic(prompt: string, opts: CallOpts): Promise<string> {
 // --- Gemini ---------------------------------------------------------------------
 
 interface GeminiResponse {
-  candidates?: { content?: { parts?: { text?: string }[] } }[];
+  candidates?: { finishReason?: string; content?: { parts?: { text?: string }[] } }[];
+  promptFeedback?: { blockReason?: string };
 }
 
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+const GEMINI_TIMEOUT_MS = 20_000;
 
 async function callGemini(prompt: string, opts: CallOpts): Promise<string> {
   const env = convexEnv();
@@ -86,17 +88,30 @@ async function callGemini(prompt: string, opts: CallOpts): Promise<string> {
     },
   });
 
-  // Retry transient overload (503) / rate-limit (429) with backoff.
+  // Retry transient overload (503) / rate-limit (429) / network timeouts with backoff.
   let lastError = "";
-  for (let attempt = 0; attempt < 4; attempt++) {
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body,
-    });
+  for (let attempt = 0; attempt < 3; attempt++) {
+    let res: Response;
+    try {
+      res = await fetch(url, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body,
+        signal: AbortSignal.timeout(GEMINI_TIMEOUT_MS),
+      });
+    } catch (err) {
+      lastError = `Gemini request failed: ${String(err)}`;
+      await sleep(1500 * (attempt + 1));
+      continue;
+    }
     if (res.ok) {
       const data = (await res.json()) as GeminiResponse;
-      return (data.candidates?.[0]?.content?.parts ?? []).map((p) => p.text ?? "").join("");
+      const candidate = data.candidates?.[0];
+      const text = (candidate?.content?.parts ?? []).map((p) => p.text ?? "").join("");
+      if (text) return text;
+      // 200 but no text (MAX_TOKENS truncation, SAFETY block, …) — surface it clearly.
+      const reason = candidate?.finishReason ?? data.promptFeedback?.blockReason ?? "empty response";
+      throw new Error(`Gemini returned no text (${reason})`);
     }
     lastError = `Gemini ${res.status}: ${(await res.text()).slice(0, 200)}`;
     if (res.status !== 503 && res.status !== 429) throw new Error(lastError);

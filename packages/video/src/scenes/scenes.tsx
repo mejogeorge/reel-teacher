@@ -146,9 +146,13 @@ const MeaningScene: React.FC<SceneProps> = ({ content, theme }) => {
 };
 
 function highlightWord(text: string, word: string, theme: Theme) {
-  const parts = text.split(new RegExp(`(${word})`, "ig"));
+  const trimmed = word.trim();
+  if (!trimmed) return [<span key={0}>{text}</span>];
+  // Escape regex metacharacters — the word comes from the LLM and may contain them.
+  const escaped = trimmed.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const parts = text.split(new RegExp(`(${escaped})`, "ig"));
   return parts.map((part, i) =>
-    part.toLowerCase() === word.toLowerCase() ? (
+    part.toLowerCase() === trimmed.toLowerCase() ? (
       <span key={i} style={{ color: theme.accent, fontWeight: 800 }}>
         {part}
       </span>
