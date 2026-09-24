@@ -21,11 +21,14 @@ export function TodayWordCard({ word, assets }: { word: WordDoc; assets: Asset[]
   const reject = useMutation(api.reject);
   const regenerate = useMutation(api.regenerate);
   const rerender = useMutation(api.rerender);
-  const publishToInstagram = useMutation(api.publishToInstagram);
+  const publishReel = useMutation(api.publishReel);
   const posts = useQuery(api.getPostTargets, { wordId: word._id });
 
   const videos = assets.filter((a) => a.kind === "video" && a.url);
-  const latestPost = posts?.[0];
+  const latestFor = (platform: string) => posts?.find((p) => p.platform === platform);
+  const busyPublishing = posts?.some(
+    (p) => p.status === "pending" || p.status === "publishing",
+  );
 
   return (
     <Card>
@@ -98,33 +101,39 @@ export function TodayWordCard({ word, assets }: { word: WordDoc; assets: Asset[]
               {word.status === "rendered" ? (
                 <Button
                   size="sm"
-                  onClick={() => run(() => publishToInstagram({ wordId: word._id }))}
-                  disabled={latestPost?.status === "publishing" || latestPost?.status === "pending"}
+                  onClick={() => run(() => publishReel({ wordId: word._id }))}
+                  disabled={busyPublishing}
                 >
-                  Publish to Instagram
+                  Publish to Instagram + Facebook
                 </Button>
               ) : null}
             </div>
 
-            {latestPost ? (
-              <p className="pt-1 text-xs">
-                <span className="text-muted-foreground">Instagram: </span>
-                {latestPost.status === "published" ? (
-                  <a
-                    href={latestPost.permalink ?? "#"}
-                    className="text-emerald-600 hover:underline"
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    published{latestPost.permalink ? " ↗" : ""}
-                  </a>
-                ) : latestPost.status === "failed" ? (
-                  <span className="text-red-600">failed — {latestPost.error}</span>
-                ) : (
-                  <span className="text-purple-600">{latestPost.status}…</span>
-                )}
-              </p>
-            ) : null}
+            <div className="space-y-0.5 pt-1 text-xs">
+              {(["instagram", "facebook"] as const).map((platform) => {
+                const p = latestFor(platform);
+                if (!p) return null;
+                return (
+                  <p key={platform}>
+                    <span className="text-muted-foreground capitalize">{platform}: </span>
+                    {p.status === "published" ? (
+                      <a
+                        href={p.permalink ?? "#"}
+                        className="text-emerald-600 hover:underline"
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        published{p.permalink ? " ↗" : ""}
+                      </a>
+                    ) : p.status === "failed" ? (
+                      <span className="text-red-600">failed — {p.error}</span>
+                    ) : (
+                      <span className="text-purple-600">{p.status}…</span>
+                    )}
+                  </p>
+                );
+              })}
+            </div>
           </div>
 
           <div className="flex flex-col gap-4">

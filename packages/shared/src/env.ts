@@ -56,6 +56,9 @@ export const convexEnvSchema = z.object({
   IG_USER_ID: z.string().optional(),
   IG_ACCESS_TOKEN: z.string().optional(),
   IG_GRAPH_VERSION: z.string().min(1).default("v21.0"),
+  // Facebook Page publishing (same Meta app + Page token). Absent = disabled.
+  FB_PAGE_ID: z.string().optional(),
+  FB_ACCESS_TOKEN: z.string().optional(),
 });
 export type ConvexEnv = z.infer<typeof convexEnvSchema>;
 

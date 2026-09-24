@@ -160,6 +160,7 @@ export const api = {
   >("admin:addMusicTrack"),
   setMusicActive: m<{ trackId: string; active: boolean }, null>("admin:setMusicActive"),
   publishToInstagram: m<{ wordId: string }, null>("admin:publishToInstagram"),
+  publishReel: m<{ wordId: string; platforms?: string[] }, null>("admin:publishReel"),
   updateSettings: m<{ patch: Partial<Settings> }, null>("settings:update"),
   bootstrap: m<NoArgs, null>("admin:bootstrap"),
 };

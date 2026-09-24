@@ -14,6 +14,10 @@ interface GraphResult {
   status_code?: string;
   status?: string;
   permalink?: string;
+  permalink_url?: string;
+  video_id?: string;
+  upload_url?: string;
+  success?: boolean;
   error?: { message?: string };
 }
 
@@ -111,6 +115,90 @@ export const instagramPublish = internalAction({
         id: postTargetId,
         status: "published",
         externalId: mediaId,
+        permalink,
+      });
+    } catch (err) {
+      await fail(err instanceof Error ? err.message : String(err));
+    }
+  },
+});
+
+/**
+ * Publish a word's rendered video to a Facebook Page as a Reel (Meta video_reels
+ * API): start upload session → hosted upload via file_url → finish + publish.
+ */
+export const facebookPublish = internalAction({
+  args: { wordId: v.id("words"), postTargetId: v.id("postTargets") },
+  handler: async (ctx, { wordId, postTargetId }) => {
+    const env = convexEnv();
+    const fail = (error: string) =>
+      ctx.runMutation(internal.publishData.updatePostTarget, {
+        id: postTargetId,
+        status: "failed",
+        error,
+      });
+
+    if (!env.FB_PAGE_ID || !env.FB_ACCESS_TOKEN) {
+      await fail("FB_PAGE_ID / FB_ACCESS_TOKEN not configured");
+      return;
+    }
+    const context = await ctx.runQuery(internal.publishData.getPublishContext, { wordId });
+    if (!context) {
+      await fail("no rendered video / content to publish");
+      return;
+    }
+
+    await ctx.runMutation(internal.publishData.updatePostTarget, {
+      id: postTargetId,
+      status: "publishing",
+    });
+
+    const base = `https://graph.facebook.com/${env.IG_GRAPH_VERSION}`;
+    const token = env.FB_ACCESS_TOKEN;
+    const pageId = env.FB_PAGE_ID;
+
+    try {
+      // 1. Start an upload session.
+      const start = await graphJson(`${base}/${pageId}/video_reels`, {
+        method: "POST",
+        body: new URLSearchParams({ upload_phase: "start", access_token: token }),
+      });
+      const videoId = start.video_id;
+      const uploadUrl = start.upload_url;
+      if (!videoId || !uploadUrl) throw new Error("no video_id / upload_url returned");
+
+      // 2. Hosted upload — tell Facebook to fetch the video from our URL.
+      const uploadRes = await fetch(uploadUrl, {
+        method: "POST",
+        headers: { Authorization: `OAuth ${token}`, file_url: context.videoUrl },
+      });
+      const uploadJson = (await uploadRes.json()) as GraphResult;
+      if (!uploadRes.ok || uploadJson.error || uploadJson.success === false) {
+        throw new Error(`upload: ${uploadJson.error?.message ?? `HTTP ${uploadRes.status}`}`);
+      }
+
+      // 3. Finish + publish.
+      const finishUrl = `${base}/${pageId}/video_reels?${new URLSearchParams({
+        video_id: videoId,
+        upload_phase: "finish",
+        video_state: "PUBLISHED",
+        description: context.caption,
+        access_token: token,
+      })}`;
+      await graphJson(finishUrl, { method: "POST" });
+
+      let permalink: string | undefined;
+      try {
+        const perm = await graphJson(`${base}/${videoId}?fields=permalink_url&access_token=${token}`);
+        permalink = perm.permalink_url;
+      } catch {
+        // best-effort
+      }
+
+      await ctx.runMutation(internal.publishData.updatePostTarget, {
+        id: postTargetId,
+        status: "published",
+        externalId: videoId,
         permalink,
       });
     } catch (err) {
