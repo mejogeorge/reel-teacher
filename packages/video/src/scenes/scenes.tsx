@@ -32,7 +32,7 @@ const HookScene: React.FC<SceneProps> = ({ content, theme }) => {
           lineHeight: 1.25,
         }}
       >
-        {content.narration.hook}
+        {highlightWord(content.narration.hook, content.word, theme)}
       </div>
     </SceneFrame>
   );
