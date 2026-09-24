@@ -113,6 +113,26 @@ export default defineSchema({
     .index("by_status", ["status"])
     .index("by_wordId", ["wordId"]),
 
+  // One snapshot per rendered video: the "recipe" that produced it. Phase-2
+  // engagement metrics (likes/shares/views) will correlate against these to bias
+  // future word/theme/style choices. Kept platform-independent.
+  videoRecipes: defineTable({
+    wordId: v.id("words"),
+    renderVersion: v.number(),
+    word: v.string(),
+    slug: v.string(),
+    themeId: v.string(),
+    brandHandle: v.string(),
+    backgroundMusicMode: backgroundMusicModeValidator,
+    animationStyleVersion: v.string(),
+    voice: v.optional(v.string()),
+    durationSec: v.number(),
+    content: wordContentValidator,
+    createdAt: v.number(),
+  })
+    .index("by_wordId", ["wordId"])
+    .index("by_theme", ["themeId"]),
+
   // Produced media stored in Convex file storage; independent of any platform.
   assets: defineTable({
     wordId: v.id("words"),

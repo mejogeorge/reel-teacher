@@ -1,4 +1,4 @@
-import { assertTransition, isTerminal, type WordStatus } from "@wordcast/shared";
+import { ANIMATION_STYLE_VERSION, assertTransition, isTerminal, type WordStatus } from "@wordcast/shared";
 import { v } from "convex/values";
 import { internalMutation, internalQuery, mutation, query } from "./_generated/server";
 import { requireWorker } from "./lib/auth";
@@ -168,6 +168,23 @@ export const completeJob = mutation({
       assertTransition(word.status, "rendered");
       await ctx.db.patch(job.wordId, { status: "rendered", updatedAt: now });
     }
+
+    // Snapshot the recipe that produced this video (Phase-2 engagement analytics
+    // will correlate metrics against these).
+    await ctx.db.insert("videoRecipes", {
+      wordId: job.wordId,
+      renderVersion: job.renderVersion,
+      word: word?.word ?? job.request.content.word,
+      slug: word?.slug ?? "",
+      themeId,
+      brandHandle: job.request.brandHandle,
+      backgroundMusicMode: job.request.backgroundMusicMode,
+      animationStyleVersion: ANIMATION_STYLE_VERSION,
+      durationSec: args.durationSec,
+      content: job.request.content,
+      createdAt: now,
+    });
+
     await logEvent(ctx, {
       wordId: job.wordId,
       type: "render.complete",

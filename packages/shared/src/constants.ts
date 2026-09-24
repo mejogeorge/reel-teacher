@@ -23,3 +23,9 @@ export const SAFE_AREA = {
 /** Narration length target (words) — roughly 20–40s of speech. */
 export const NARRATION_WORDS_MIN = 60;
 export const NARRATION_WORDS_MAX = 110;
+
+/**
+ * Bump when scene motion/layout changes, so a rendered video's recipe records
+ * which animation style produced it (for correlating with engagement later).
+ */
+export const ANIMATION_STYLE_VERSION = "v1";
