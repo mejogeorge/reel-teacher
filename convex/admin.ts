@@ -224,6 +224,12 @@ export const changeWord = mutation({
       }
     }
 
+    // Unlink the run's word so the dashboard shows a "finding a word" loader
+    // until the replacement is picked + enriched.
+    if (word.runId) {
+      await ctx.db.patch(word.runId, { wordId: undefined });
+    }
+
     await logEvent(ctx, {
       wordId,
       type: "word.changed",

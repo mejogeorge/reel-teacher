@@ -104,7 +104,16 @@ export default function TodayPage() {
             </CardContent>
           </Card>
 
-          {word ? <TodayWordCard word={word} assets={today.assets} /> : null}
+          {word ? (
+            <TodayWordCard word={word} assets={today.assets} />
+          ) : today.run ? (
+            <Card>
+              <CardContent className="flex items-center gap-3 py-8 text-muted-foreground">
+                <span className="inline-block h-5 w-5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                Finding and selecting a word…
+              </CardContent>
+            </Card>
+          ) : null}
         </div>
       )}
     </Shell>
