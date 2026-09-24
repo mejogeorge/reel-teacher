@@ -1,4 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
+import type { z } from "zod";
 import { convexEnv } from "./env";
 
 /**
@@ -45,4 +46,50 @@ export async function callClaudeText(prompt: string, opts: CallOpts = {}): Promi
 export async function callClaudeJSON(prompt: string, opts: CallOpts = {}): Promise<unknown> {
   const raw = await callClaudeText(prompt, opts);
   return JSON.parse(stripCodeFences(raw));
+}
+
+export type ValidatedResult<T> =
+  | { ok: true; data: T }
+  | { ok: false; error: string };
+
+/**
+ * Call Claude, parse JSON, and validate against a zod schema. On failure, retry
+ * once with the parse/validation error appended so the model can self-correct.
+ */
+export async function callClaudeValidated<T>(
+  prompt: string,
+  schema: z.ZodType<T>,
+  opts: CallOpts & { retries?: number } = {},
+): Promise<ValidatedResult<T>> {
+  const maxRetries = opts.retries ?? 1;
+  let currentPrompt = prompt;
+  let lastError = "unknown error";
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    let text: string;
+    try {
+      text = await callClaudeText(currentPrompt, opts);
+    } catch (err) {
+      return { ok: false, error: `LLM call failed: ${String(err)}` };
+    }
+
+    let json: unknown;
+    try {
+      json = JSON.parse(stripCodeFences(text));
+    } catch {
+      lastError = "response was not valid JSON";
+      currentPrompt = `${prompt}\n\nYour previous response was not valid JSON. Respond with JSON only, no prose or code fences.`;
+      continue;
+    }
+
+    const parsed = schema.safeParse(json);
+    if (parsed.success) return { ok: true, data: parsed.data };
+
+    lastError = parsed.error.issues
+      .map((i) => `- ${i.path.join(".") || "(root)"}: ${i.message}`)
+      .join("\n");
+    currentPrompt = `${prompt}\n\nYour previous JSON failed validation:\n${lastError}\nReturn corrected JSON only.`;
+  }
+
+  return { ok: false, error: `validation failed after ${maxRetries + 1} attempts:\n${lastError}` };
 }

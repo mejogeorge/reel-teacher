@@ -4,4 +4,5 @@ export * from "./auth.js";
 export * from "./env.js";
 export * from "./stopwords.js";
 export * from "./trend.js";
+export * from "./dictionary.js";
 export * from "./schemas/index.js";
