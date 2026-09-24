@@ -102,21 +102,44 @@ const WordScene: React.FC<SceneProps> = ({ content, theme }) => {
   );
 };
 
+/** Greedy word-wrap into lines of at most `maxChars` (so each line is its own block). */
+function wrapLines(text: string, maxChars: number): string[] {
+  const words = text.split(/\s+/).filter(Boolean);
+  const lines: string[] = [];
+  let current = "";
+  for (const word of words) {
+    if (current.length === 0) current = word;
+    else if (`${current} ${word}`.length <= maxChars) current = `${current} ${word}`;
+    else {
+      lines.push(current);
+      current = word;
+    }
+  }
+  if (current) lines.push(current);
+  return lines;
+}
+
 const MeaningScene: React.FC<SceneProps> = ({ content, theme }) => {
-  const s = useEnter();
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  // All lines occupy their final slots from frame 0 (opacity 0), so revealing them
+  // one by one never reflows the block — each animates in place.
+  const lines = wrapLines(content.simpleMeaning, 24);
   return (
     <SceneFrame theme={theme}>
-      <div style={{ fontSize: 40, color: theme.muted, marginBottom: 24, opacity: s }}>meaning</div>
-      <div
-        style={{
-          opacity: s,
-          transform: `translateY(${interpolate(s, [0, 1], [30, 0])}px)`,
-          fontSize: 72,
-          fontWeight: 600,
-          lineHeight: 1.3,
-        }}
-      >
-        {content.simpleMeaning}
+      <div style={{ fontSize: 40, color: theme.muted, marginBottom: 24 }}>meaning</div>
+      <div style={{ fontSize: 60, fontWeight: 600, lineHeight: 1.3 }}>
+        {lines.map((line, i) => {
+          const s = spring({ frame: frame - i * 6, fps, config: { damping: 200 } });
+          return (
+            <div
+              key={i}
+              style={{ opacity: s, transform: `translateY(${interpolate(s, [0, 1], [24, 0])}px)` }}
+            >
+              {line}
+            </div>
+          );
+        })}
       </div>
     </SceneFrame>
   );
