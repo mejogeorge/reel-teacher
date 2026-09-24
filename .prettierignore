@@ -1,0 +1,8 @@
+node_modules
+dist
+.next
+.turbo
+out
+coverage
+convex/_generated
+pnpm-lock.yaml

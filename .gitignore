@@ -1,0 +1,44 @@
+# dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# builds
+dist/
+build/
+out/
+.next/
+.turbo/
+*.tsbuildinfo
+
+# convex
+convex/_generated/
+
+# remotion
+packages/video/out/
+apps/renderer/out/
+apps/renderer/tmp/
+
+# env
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# model / render caches
+.model-cache/
+.remotion-cache/
+
+# logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# os / editor
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# test
+coverage/
