@@ -1,6 +1,6 @@
 import naughtyWords from "naughty-words";
 import { internalMutation } from "./_generated/server";
-import { FALLBACK_WORDS } from "./lib/fallback-seed";
+import { FALLBACK_WORDS } from "./lib/fallbackSeed";
 import { logEvent } from "./lib/events";
 
 /** English profanity/slur list from the maintained `naughty-words` package. */

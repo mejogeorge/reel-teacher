@@ -3,6 +3,7 @@
 import { pickWordResultSchema, toSlug } from "@wordcast/shared";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
+import type { Id } from "./_generated/dataModel";
 import { internalAction } from "./_generated/server";
 import { callClaudeJSON } from "./lib/anthropic";
 import { rateLimiter } from "./lib/ratelimit";
@@ -42,7 +43,10 @@ function buildPickPrompt(candidates: Candidate[]): string {
  */
 export const pickWord = internalAction({
   args: { runDate: v.string(), runId: v.optional(v.id("pipelineRuns")) },
-  handler: async (ctx, { runDate, runId }) => {
+  handler: async (
+    ctx,
+    { runDate, runId },
+  ): Promise<{ wordId: Id<"words">; word: string; origin: "trending" | "fallback" }> => {
     const candidates = await ctx.runQuery(internal.pickData.getCandidates, { runDate });
 
     if (candidates.length > 0) {

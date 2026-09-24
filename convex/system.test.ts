@@ -1,8 +1,10 @@
+/// <reference types="vite/client" />
 import { convexTest } from "convex-test";
 import { beforeEach, expect, test } from "vitest";
 import { api } from "./_generated/api";
 import schema from "./schema";
-import { modules } from "./test.helpers";
+
+const modules = import.meta.glob("./**/*.*s");
 
 beforeEach(() => {
   process.env.WORKER_SECRET = "test-worker-secret";

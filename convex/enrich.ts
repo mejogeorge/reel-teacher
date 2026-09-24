@@ -53,7 +53,7 @@ async function fetchDictionary(word: string): Promise<DictionaryResult | null> {
 /** Look up and store a dictionary definition (dictionaryapi.dev, Wordnik fallback). */
 export const fetchDefinition = internalAction({
   args: { wordId: v.id("words") },
-  handler: async (ctx, { wordId }) => {
+  handler: async (ctx, { wordId }): Promise<{ ok: boolean }> => {
     const word = await ctx.runQuery(internal.enrichData.getWord, { wordId });
     if (!word) throw new Error("word not found");
 
@@ -74,7 +74,7 @@ export const fetchDefinition = internalAction({
 /** Generate dictionary-grounded WordContent (zod-validated, one retry on failure). */
 export const generateContent = internalAction({
   args: { wordId: v.id("words") },
-  handler: async (ctx, { wordId }) => {
+  handler: async (ctx, { wordId }): Promise<{ ok: boolean }> => {
     const word = await ctx.runQuery(internal.enrichData.getWord, { wordId });
     if (!word) throw new Error("word not found");
     if (!word.definition) {
@@ -109,7 +109,7 @@ export const generateContent = internalAction({
 /** Full enrichment chain for a freshly-selected word (manual add / retry). */
 export const enrichWord = internalAction({
   args: { wordId: v.id("words") },
-  handler: async (ctx, { wordId }) => {
+  handler: async (ctx, { wordId }): Promise<{ ok: boolean }> => {
     const def = await ctx.runAction(internal.enrich.fetchDefinition, { wordId });
     if (!def.ok) return { ok: false as const };
     const content = await ctx.runAction(internal.enrich.generateContent, { wordId });
@@ -122,7 +122,7 @@ export const enrichWord = internalAction({
 /** Re-run content generation + safety for a word that already has a definition. */
 export const reprocess = internalAction({
   args: { wordId: v.id("words") },
-  handler: async (ctx, { wordId }) => {
+  handler: async (ctx, { wordId }): Promise<{ ok: boolean }> => {
     const content = await ctx.runAction(internal.enrich.generateContent, { wordId });
     if (!content.ok) return { ok: false as const };
     await ctx.runAction(internal.enrich.safetyCheck, { wordId });
@@ -133,7 +133,7 @@ export const reprocess = internalAction({
 /** Classify content safety: blocklist substring match + LLM classifier. Fail closed. */
 export const safetyCheck = internalAction({
   args: { wordId: v.id("words") },
-  handler: async (ctx, { wordId }) => {
+  handler: async (ctx, { wordId }): Promise<{ passed: boolean }> => {
     const word = await ctx.runQuery(internal.enrichData.getWord, { wordId });
     if (!word || !word.content) throw new Error("word/content not found");
 
@@ -160,7 +160,7 @@ export const safetyCheck = internalAction({
       { fast: true, maxTokens: 500, retries: 1 },
     );
     const safety = result.ok
-      ? { passed: result.data.safe, reasons: result.data.reasons, model }
+      ? { passed: result.data.safe, reasons: result.data.reasons ?? [], model }
       : { passed: false, reasons: [`safety check error: ${result.error}`], model };
 
     await ctx.runMutation(internal.enrichData.setSafetyResult, { wordId, safety });

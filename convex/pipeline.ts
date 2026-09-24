@@ -11,8 +11,10 @@ const WATCHDOG_HOURS = 6;
 const CATCHUP_DAYS = 2;
 
 export const workflow = new WorkflowManager(components.workflow, {
-  defaultRetryBehavior: RETRY,
-  retryActionsByDefault: true,
+  workpoolOptions: {
+    defaultRetryBehavior: RETRY,
+    retryActionsByDefault: true,
+  },
 });
 
 function todayUtc(): string {

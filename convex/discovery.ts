@@ -15,7 +15,10 @@ const MAX_TERM_STATS_PER_RUN = 300;
  */
 export const discoverCandidates = internalAction({
   args: { runDate: v.string() },
-  handler: async (ctx, { runDate }) => {
+  handler: async (
+    ctx,
+    { runDate },
+  ): Promise<{ docCount: number; candidateCount: number; feedErrors: number }> => {
     const enabledSources = await ctx.runQuery(internal.discoveryData.getEnabledSources, {});
     const { docs, errors } = await fetchAllSources(enabledSources);
 
@@ -44,7 +47,7 @@ export const discoverCandidates = internalAction({
       })),
     });
 
-    await ctx.runMutation(internal.events.log, {
+    await ctx.runMutation(internal.lib.events.log, {
       type: "discovery.complete",
       message: `Discovered ${ranked.length} candidates from ${docs.length} docs`,
       data: { docCount: docs.length, candidateCount: ranked.length, feedErrors: errors },
