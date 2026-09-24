@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { internalMutation, internalQuery } from "./_generated/server";
 import { logEvent } from "./lib/events";
+import { enqueueRenderForWord } from "./lib/render";
 import {
   dictionaryResultValidator,
   safetyValidator,
@@ -102,6 +103,8 @@ export const approve = internalMutation({
     const now = Date.now();
     await ctx.db.patch(wordId, { status: "approved", approvedAt: now, updatedAt: now });
     await logEvent(ctx, { wordId, type: "approve.done", message: "Approved" });
+    // Enqueue the render as soon as a word is approved (auto or manual).
+    await enqueueRenderForWord(ctx, wordId);
   },
 });
 

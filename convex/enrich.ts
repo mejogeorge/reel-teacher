@@ -14,6 +14,7 @@ import { internal } from "./_generated/api";
 import { internalAction } from "./_generated/server";
 import { callClaudeValidated } from "./lib/anthropic";
 import { convexEnv } from "./lib/env";
+import { rateLimiter } from "./lib/ratelimit";
 
 const DICT_TIMEOUT_MS = 10_000;
 
@@ -85,6 +86,7 @@ export const generateContent = internalAction({
       return { ok: false as const };
     }
 
+    await rateLimiter.limit(ctx, "llm", { throws: true });
     const result = await callClaudeValidated(
       buildContentPrompt(word.definition),
       wordContentSchema,
@@ -127,6 +129,7 @@ export const safetyCheck = internalAction({
 
     // 2. LLM classification — fail closed on any error.
     const model = convexEnv().ANTHROPIC_MODEL_FAST;
+    await rateLimiter.limit(ctx, "llm", { throws: true });
     const result = await callClaudeValidated(
       buildSafetyPrompt(word.word, contentText),
       safetyClassificationSchema,

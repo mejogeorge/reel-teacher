@@ -114,6 +114,14 @@ export const safetyValidator = v.object({
   model: v.string(),
 });
 
+/** What the pipeline enqueues for a render (voice + music resolved by the worker). */
+export const renderRequestValidator = v.object({
+  content: wordContentValidator,
+  themeId: v.string(),
+  brandHandle: v.string(),
+  backgroundMusicMode: backgroundMusicModeValidator,
+});
+
 /** All-optional patch validator for the settings update mutation. */
 export const settingsPatchValidator = v.object({
   approvalMode: v.optional(approvalModeValidator),
@@ -122,6 +130,7 @@ export const settingsPatchValidator = v.object({
   dailyRunMinuteUtc: v.optional(v.number()),
   enabledSources: v.optional(v.array(v.string())),
   defaultVoice: v.optional(v.string()),
+  brandHandle: v.optional(v.string()),
   themeRotation: v.optional(v.array(v.string())),
   backgroundMusicMode: v.optional(backgroundMusicModeValidator),
   maxAttemptsPerStep: v.optional(v.number()),

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { wordContentSchema } from "./content.js";
+import { backgroundMusicModeSchema } from "./domain.js";
 
 /** One voiced narration segment: a key matching a scene, its audio src, and duration. */
 export const voiceSegmentSchema = z.object({
@@ -29,3 +30,16 @@ export const videoInputPropsSchema = z.object({
 });
 
 export type VideoInputProps = z.infer<typeof videoInputPropsSchema>;
+
+/**
+ * What the pipeline enqueues for a render. The worker turns this into full
+ * VideoInputProps by generating voice (TTS) and choosing music at render time.
+ */
+export const renderRequestSchema = z.object({
+  content: wordContentSchema,
+  themeId: z.string().min(1),
+  brandHandle: z.string().min(1),
+  backgroundMusicMode: backgroundMusicModeSchema,
+});
+
+export type RenderRequest = z.infer<typeof renderRequestSchema>;
