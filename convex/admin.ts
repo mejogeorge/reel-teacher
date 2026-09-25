@@ -390,6 +390,26 @@ export const setMusicActive = mutation({
   },
 });
 
+export const getRenderStatus = query({
+  args: { wordId: v.id("words") },
+  handler: async (ctx, { wordId }) => {
+    await requireAdmin(ctx);
+    const jobs = await ctx.db
+      .query("renderJobs")
+      .withIndex("by_wordId", (q) => q.eq("wordId", wordId))
+      .collect();
+    const latest = jobs.sort((a, b) => b.createdAt - a.createdAt)[0];
+    if (!latest) return null;
+    return {
+      status: latest.status,
+      attempts: latest.attempts,
+      themeId: latest.request.themeId,
+      error: latest.error,
+      updatedAt: latest.updatedAt,
+    };
+  },
+});
+
 export const getPostTargets = query({
   args: { wordId: v.id("words") },
   handler: async (ctx, { wordId }) => {

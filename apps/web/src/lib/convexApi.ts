@@ -114,6 +114,17 @@ export interface PostTarget {
   updatedAt: number;
 }
 
+export interface RenderStatus {
+  status: "queued" | "claimed" | "rendering" | "succeeded" | "failed";
+  attempts: number;
+  themeId: string;
+  error?: string;
+  updatedAt: number;
+}
+
+/** Available theme ids (keep in sync with packages/video themes). */
+export const THEME_IDS = ["minimal-light", "bold-dark", "chalkboard"] as const;
+
 export type SettingsDoc = Settings & { _id: string; key: string };
 
 type NoArgs = Record<string, never>;
@@ -133,6 +144,7 @@ export const api = {
   systemStatus: q<NoArgs, SystemStatus>("admin:systemStatus"),
   getSettings: q<NoArgs, SettingsDoc | null>("settings:get"),
   getPostTargets: q<{ wordId: string }, PostTarget[]>("admin:getPostTargets"),
+  getRenderStatus: q<{ wordId: string }, RenderStatus | null>("admin:getRenderStatus"),
 
   approveNow: m<{ wordId: string }, null>("admin:approveNow"),
   changeWord: m<{ wordId: string }, null>("admin:changeWord"),

@@ -1,11 +1,12 @@
 "use client";
 
 import { useMutation, useQuery } from "convex/react";
+import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { VideoPreview } from "@/components/VideoPreview";
-import { api, type Asset, type WordDoc } from "@/lib/convexApi";
+import { api, THEME_IDS, type Asset, type WordDoc } from "@/lib/convexApi";
 
 async function run(action: () => Promise<unknown>) {
   try {
@@ -23,12 +24,16 @@ export function TodayWordCard({ word, assets }: { word: WordDoc; assets: Asset[]
   const rerender = useMutation(api.rerender);
   const publishReel = useMutation(api.publishReel);
   const posts = useQuery(api.getPostTargets, { wordId: word._id });
+  const renderStatus = useQuery(api.getRenderStatus, { wordId: word._id });
+  const [theme, setTheme] = useState<string>(word.themeId ?? "minimal-light");
 
   const videos = assets.filter((a) => a.kind === "video" && a.url);
   const latestFor = (platform: string) => posts?.find((p) => p.platform === platform);
   const busyPublishing = posts?.some(
     (p) => p.status === "pending" || p.status === "publishing",
   );
+  const rendering =
+    !!renderStatus && ["queued", "claimed", "rendering"].includes(renderStatus.status);
 
   return (
     <Card>
@@ -91,10 +96,22 @@ export function TodayWordCard({ word, assets }: { word: WordDoc; assets: Asset[]
               >
                 Regenerate
               </Button>
+              <select
+                value={theme}
+                onChange={(e) => setTheme(e.target.value)}
+                className="rounded-md border px-2 py-1 text-sm"
+              >
+                {THEME_IDS.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </select>
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => run(() => rerender({ wordId: word._id }))}
+                disabled={rendering}
+                onClick={() => run(() => rerender({ wordId: word._id, themeId: theme }))}
               >
                 Re-render
               </Button>
@@ -102,12 +119,30 @@ export function TodayWordCard({ word, assets }: { word: WordDoc; assets: Asset[]
                 <Button
                   size="sm"
                   onClick={() => run(() => publishReel({ wordId: word._id }))}
-                  disabled={busyPublishing}
+                  disabled={busyPublishing || rendering}
                 >
                   Publish to Instagram + Facebook
                 </Button>
               ) : null}
             </div>
+
+            {renderStatus ? (
+              <p className="flex items-center gap-2 pt-1 text-xs">
+                {rendering ? (
+                  <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent text-purple-600" />
+                ) : null}
+                <span className="text-muted-foreground">Render ({renderStatus.themeId}): </span>
+                {renderStatus.status === "failed" ? (
+                  <span className="text-red-600">failed — {renderStatus.error}</span>
+                ) : renderStatus.status === "queued" ? (
+                  <span className="text-amber-600">queued — needs the render worker running</span>
+                ) : renderStatus.status === "succeeded" ? (
+                  <span className="text-emerald-600">done</span>
+                ) : (
+                  <span className="text-purple-600">{renderStatus.status}…</span>
+                )}
+              </p>
+            ) : null}
 
             <div className="space-y-0.5 pt-1 text-xs">
               {(["instagram", "facebook"] as const).map((platform) => {
