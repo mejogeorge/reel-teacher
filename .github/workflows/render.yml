@@ -39,9 +39,8 @@ jobs:
           pnpm --filter @wordcast/video build
           pnpm --filter @wordcast/renderer build
 
-      - name: Ensure headless browser
-        run: cd apps/renderer && pnpm exec remotion browser ensure
-
+      # The worker calls ensureBrowser() at startup, so no separate CLI step is
+      # needed (this app has @remotion/renderer but not @remotion/cli).
       - name: Render queued jobs
         env:
           CONVEX_URL: ${{ secrets.CONVEX_URL }}

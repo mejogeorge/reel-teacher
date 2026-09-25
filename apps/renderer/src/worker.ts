@@ -1,5 +1,6 @@
 import { promises as fs } from "node:fs";
 import { setTimeout as sleep } from "node:timers/promises";
+import { ensureBrowser } from "@remotion/renderer";
 import { createConvexClient, refs, type ClaimedJob } from "./convex.js";
 import { getRendererEnv } from "./env.js";
 import { renderJob, validateOutput } from "./render.js";
@@ -108,6 +109,8 @@ export async function runOnce(): Promise<void> {
   const deadline = Date.now() + 14 * 60_000;
   let emptyPolls = 0;
 
+  // Download/locate Chromium before claiming work (no @remotion/cli in this app).
+  await ensureBrowser();
   console.log(`WordCast renderer (run-once) "${env.WORKER_ID}" polling ${env.CONVEX_URL}`);
   while (Date.now() < deadline) {
     let job: ClaimedJob | null;
@@ -147,6 +150,8 @@ export async function runWorker(): Promise<void> {
   process.on("SIGTERM", shutdown);
   process.on("SIGINT", shutdown);
 
+  // Download/locate Chromium before claiming work (no @remotion/cli in this app).
+  await ensureBrowser();
   console.log(`WordCast renderer "${env.WORKER_ID}" started; polling ${env.CONVEX_URL}`);
   while (!stopping) {
     let job: ClaimedJob | null;
