@@ -46,10 +46,12 @@ jobs:
           CONVEX_URL: ${{ secrets.CONVEX_URL }}
           WORKER_SECRET: ${{ secrets.WORKER_SECRET }}
         run: |
+          # Strip stray leading/trailing whitespace (matches the worker's env trim).
+          CONVEX_URL="$(printf '%s' "$CONVEX_URL" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
           test -n "$CONVEX_URL" || { echo "::error::CONVEX_URL is not configured (dev environment)"; exit 1; }
           case "$CONVEX_URL" in
             http://*|https://*) ;;
-            *) echo "::error::CONVEX_URL must start with http:// or https:// (check for stray spaces/quotes)"; exit 1 ;;
+            *) echo "::error::CONVEX_URL must start with http:// or https:// — got a value with stray quotes or the wrong host. Re-save the secret as https://<deployment>.convex.cloud"; exit 1 ;;
           esac
           test -n "$WORKER_SECRET" || { echo "::error::WORKER_SECRET is not configured (dev environment)"; exit 1; }
           echo "config looks valid"
