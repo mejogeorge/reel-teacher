@@ -29,9 +29,10 @@ export function parseEnv<T extends z.ZodTypeAny>(
 
 /** Renderer worker env. */
 export const rendererEnvSchema = z.object({
-  CONVEX_URL: z.string().url(),
-  WORKER_SECRET: z.string().min(1),
-  WORKER_ID: z.string().min(1).default("local-worker-1"),
+  // trim(): CI/secret stores sometimes introduce stray leading/trailing whitespace.
+  CONVEX_URL: z.string().trim().url(),
+  WORKER_SECRET: z.string().trim().min(1),
+  WORKER_ID: z.string().trim().min(1).default("local-worker-1"),
   RENDER_CONCURRENCY: z.coerce.number().int().min(1).default(1),
   MODEL_CACHE_DIR: z.string().min(1).default("./.model-cache"),
 });
