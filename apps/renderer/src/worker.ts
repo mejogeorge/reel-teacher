@@ -98,6 +98,44 @@ async function processJob(client: Client, env: Env, job: ClaimedJob): Promise<vo
   }
 }
 
+/**
+ * Drain the render queue once, then exit — for ephemeral runners (GitHub Actions).
+ * Renders all currently-queued jobs; exits after a few empty polls or a time cap.
+ */
+export async function runOnce(): Promise<void> {
+  const env = getRendererEnv();
+  const client = createConvexClient(env.CONVEX_URL);
+  const deadline = Date.now() + 14 * 60_000;
+  let emptyPolls = 0;
+
+  console.log(`WordCast renderer (run-once) "${env.WORKER_ID}" polling ${env.CONVEX_URL}`);
+  while (Date.now() < deadline) {
+    let job: ClaimedJob | null;
+    try {
+      job = await client.mutation(refs.claimNextJob, {
+        secret: env.WORKER_SECRET,
+        workerId: env.WORKER_ID,
+      });
+    } catch (err) {
+      console.error("claim failed:", err);
+      await sleep(10_000);
+      continue;
+    }
+    if (!job) {
+      emptyPolls += 1;
+      if (emptyPolls >= 3) {
+        console.log("queue empty — exiting.");
+        return;
+      }
+      await sleep(15_000);
+      continue;
+    }
+    emptyPolls = 0;
+    await processJob(client, env, job);
+  }
+  console.log("run-once time budget reached — exiting.");
+}
+
 export async function runWorker(): Promise<void> {
   const env = getRendererEnv();
   const client = createConvexClient(env.CONVEX_URL);

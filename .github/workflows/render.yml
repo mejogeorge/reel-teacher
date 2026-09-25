@@ -1,0 +1,52 @@
+name: Render daily reel
+
+# Renders queued jobs in the cloud (headless Chromium), then exits. Runs shortly
+# after the Convex daily run enqueues a render. No local machine needed.
+on:
+  schedule:
+    - cron: "50 0 * * *" # 00:50 UTC — after the Convex daily run (default 00:30 UTC)
+  workflow_dispatch: {} # allow manual "Run workflow"
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install Chromium runtime deps (best effort)
+        run: |
+          sudo apt-get update || true
+          sudo apt-get install -y --no-install-recommends \
+            libnss3 libdbus-1-3 libatk1.0-0 libgbm1 libxrandr2 libxkbcommon0 \
+            libxfixes3 libxcomposite1 libxdamage1 libatk-bridge2.0-0 \
+            libpango-1.0-0 libcairo2 libcups2 libxrender1 libxext6 libx11-6 \
+            fonts-liberation || true
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build packages
+        run: |
+          pnpm --filter @wordcast/shared build
+          pnpm --filter @wordcast/video build
+          pnpm --filter @wordcast/renderer build
+
+      - name: Ensure headless browser
+        run: cd apps/renderer && pnpm exec remotion browser ensure
+
+      - name: Render queued jobs
+        env:
+          CONVEX_URL: ${{ secrets.CONVEX_URL }}
+          WORKER_SECRET: ${{ secrets.WORKER_SECRET }}
+          WORKER_ID: github-actions
+          RENDER_ONCE: "true"
+        run: node apps/renderer/dist/index.js
