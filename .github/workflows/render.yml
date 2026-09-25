@@ -39,6 +39,21 @@ jobs:
           pnpm --filter @wordcast/video build
           pnpm --filter @wordcast/renderer build
 
+      # Fail fast with a clear message if the dev-environment secrets are missing
+      # or malformed, instead of crashing deep inside the Convex client.
+      - name: Validate render configuration
+        env:
+          CONVEX_URL: ${{ secrets.CONVEX_URL }}
+          WORKER_SECRET: ${{ secrets.WORKER_SECRET }}
+        run: |
+          test -n "$CONVEX_URL" || { echo "::error::CONVEX_URL is not configured (dev environment)"; exit 1; }
+          case "$CONVEX_URL" in
+            http://*|https://*) ;;
+            *) echo "::error::CONVEX_URL must start with http:// or https:// (check for stray spaces/quotes)"; exit 1 ;;
+          esac
+          test -n "$WORKER_SECRET" || { echo "::error::WORKER_SECRET is not configured (dev environment)"; exit 1; }
+          echo "config looks valid"
+
       # The worker calls ensureBrowser() at startup, so no separate CLI step is
       # needed (this app has @remotion/renderer but not @remotion/cli).
       - name: Render queued jobs
