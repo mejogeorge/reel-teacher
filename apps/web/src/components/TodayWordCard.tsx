@@ -27,7 +27,9 @@ export function TodayWordCard({ word, assets }: { word: WordDoc; assets: Asset[]
   const renderStatus = useQuery(api.getRenderStatus, { wordId: word._id });
   const [theme, setTheme] = useState<string>(word.themeId ?? "minimal-light");
 
-  const videos = assets.filter((a) => a.kind === "video" && a.url);
+  const latestVideo = assets
+    .filter((a) => a.kind === "video" && a.url)
+    .sort((a, b) => b.renderVersion - a.renderVersion)[0];
   const latestFor = (platform: string) => posts?.find((p) => p.platform === platform);
   const busyPublishing = posts?.some(
     (p) => p.status === "pending" || p.status === "publishing",
@@ -171,16 +173,25 @@ export function TodayWordCard({ word, assets }: { word: WordDoc; assets: Asset[]
             </div>
           </div>
 
-          <div className="flex flex-col gap-4">
-            {word.content ? <VideoPreview content={word.content} themeId={word.themeId} /> : null}
-            {videos.map((a) => (
-              <video
-                key={a._id}
-                controls
-                src={a.url ?? undefined}
-                style={{ width: 270, borderRadius: 12 }}
-              />
-            ))}
+          <div className="flex flex-col gap-2">
+            {latestVideo ? (
+              <>
+                <div className="text-xs text-muted-foreground">
+                  Rendered video ({latestVideo.themeId}, v{latestVideo.renderVersion})
+                </div>
+                <video
+                  key={latestVideo._id}
+                  controls
+                  src={latestVideo.url ?? undefined}
+                  style={{ width: 270, borderRadius: 12 }}
+                />
+              </>
+            ) : word.content ? (
+              <>
+                <div className="text-xs text-muted-foreground">Live preview</div>
+                <VideoPreview content={word.content} themeId={word.themeId} />
+              </>
+            ) : null}
           </div>
         </div>
       </CardContent>
