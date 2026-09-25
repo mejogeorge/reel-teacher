@@ -10,6 +10,7 @@ on:
 jobs:
   render:
     runs-on: ubuntu-latest
+    environment: dev # secrets (CONVEX_URL, WORKER_SECRET) live in the "dev" environment
     steps:
       - uses: actions/checkout@v4
 
