@@ -33,6 +33,12 @@ export const backgroundMusicModeValidator = v.union(
   v.literal("none"),
 );
 
+export const frequencyUnitValidator = v.union(
+  v.literal("day"),
+  v.literal("week"),
+  v.literal("month"),
+);
+
 export const renderJobStatusValidator = v.union(
   v.literal("queued"),
   v.literal("claimed"),
@@ -136,4 +142,8 @@ export const settingsPatchValidator = v.object({
   maxAttemptsPerStep: v.optional(v.number()),
   pipelinePaused: v.optional(v.boolean()),
   alertWebhookUrl: v.optional(v.string()),
+  autoPublish: v.optional(v.boolean()),
+  publishPlatforms: v.optional(v.array(v.string())),
+  frequencyCount: v.optional(v.number()),
+  frequencyUnit: v.optional(frequencyUnitValidator),
 });

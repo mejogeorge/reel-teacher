@@ -17,7 +17,16 @@ export const seed = internalMutation({
   args: {},
   handler: async (ctx) => {
     const existing = await readGlobal(ctx);
-    if (existing) return existing._id;
+    if (existing) {
+      // Backfill newly-added fields on a pre-existing settings row.
+      await ctx.db.patch(existing._id, {
+        autoPublish: existing.autoPublish ?? DEFAULT_SETTINGS.autoPublish,
+        publishPlatforms: existing.publishPlatforms ?? DEFAULT_SETTINGS.publishPlatforms,
+        frequencyCount: existing.frequencyCount ?? DEFAULT_SETTINGS.frequencyCount,
+        frequencyUnit: existing.frequencyUnit ?? DEFAULT_SETTINGS.frequencyUnit,
+      });
+      return existing._id;
+    }
     const id = await ctx.db.insert("settings", { key: "global", ...DEFAULT_SETTINGS });
     await logEvent(ctx, { type: "settings.seed", message: "Seeded default settings" });
     return id;

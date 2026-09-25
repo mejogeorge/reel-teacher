@@ -24,6 +24,11 @@ const formSchema = z.object({
   alertWebhookUrl: z.string().optional(),
   themeRotationText: z.string(),
   enabledSourcesText: z.string(),
+  autoPublish: z.boolean(),
+  publishInstagram: z.boolean(),
+  publishFacebook: z.boolean(),
+  frequencyCount: z.coerce.number().int().min(1),
+  frequencyUnit: z.enum(["day", "week", "month"]),
 });
 
 type FormValues = z.input<typeof formSchema>;
@@ -53,6 +58,11 @@ export default function SettingsPage() {
         alertWebhookUrl: settings.alertWebhookUrl ?? "",
         themeRotationText: settings.themeRotation.join(", "),
         enabledSourcesText: settings.enabledSources.join(", "),
+        autoPublish: settings.autoPublish,
+        publishInstagram: settings.publishPlatforms.includes("instagram"),
+        publishFacebook: settings.publishPlatforms.includes("facebook"),
+        frequencyCount: settings.frequencyCount,
+        frequencyUnit: settings.frequencyUnit,
       });
     }
   }, [settings, reset]);
@@ -79,6 +89,13 @@ export default function SettingsPage() {
           alertWebhookUrl: parsed.alertWebhookUrl ? parsed.alertWebhookUrl : undefined,
           themeRotation: list(parsed.themeRotationText),
           enabledSources: list(parsed.enabledSourcesText),
+          autoPublish: parsed.autoPublish,
+          publishPlatforms: [
+            ...(parsed.publishInstagram ? ["instagram"] : []),
+            ...(parsed.publishFacebook ? ["facebook"] : []),
+          ],
+          frequencyCount: parsed.frequencyCount,
+          frequencyUnit: parsed.frequencyUnit,
         },
       });
       alert("Settings saved.");
@@ -169,6 +186,45 @@ export default function SettingsPage() {
                 <label className={labelCls}>Enabled sources (comma-separated feed ids; empty = all)</label>
                 <input className={inputCls} {...register("enabledSourcesText")} />
               </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Publishing &amp; schedule</CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-4 sm:grid-cols-2">
+              <div className="flex items-center gap-2 sm:col-span-2">
+                <input type="checkbox" id="autopub" {...register("autoPublish")} />
+                <label htmlFor="autopub" className="text-sm font-medium">
+                  Auto-publish each reel once it&apos;s rendered
+                </label>
+              </div>
+              <div className="flex items-center gap-4 sm:col-span-2">
+                <span className="text-sm text-muted-foreground">Post to:</span>
+                <label className="flex items-center gap-1 text-sm">
+                  <input type="checkbox" {...register("publishInstagram")} /> Instagram
+                </label>
+                <label className="flex items-center gap-1 text-sm">
+                  <input type="checkbox" {...register("publishFacebook")} /> Facebook
+                </label>
+              </div>
+              <div>
+                <label className={labelCls}>Frequency — how many</label>
+                <input type="number" min={1} className={inputCls} {...register("frequencyCount")} />
+              </div>
+              <div>
+                <label className={labelCls}>…per</label>
+                <select className={inputCls} {...register("frequencyUnit")}>
+                  <option value="day">day</option>
+                  <option value="week">week</option>
+                  <option value="month">month</option>
+                </select>
+              </div>
+              <p className="text-xs text-muted-foreground sm:col-span-2">
+                e.g. 1 per day, 3 per week, 1 per month. A new reel is produced (and
+                auto-published if enabled) once the interval elapses.
+              </p>
             </CardContent>
           </Card>
 

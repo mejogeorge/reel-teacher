@@ -1,4 +1,9 @@
-import { assertTransition, isTerminal, type WordStatus } from "@wordcast/shared";
+import {
+  assertTransition,
+  frequencyToIntervalDays,
+  isTerminal,
+  type WordStatus,
+} from "@wordcast/shared";
 import { WorkflowManager } from "@convex-dev/workflow";
 import { v } from "convex/values";
 import { components, internal } from "./_generated/api";
@@ -8,7 +13,6 @@ import { logEvent } from "./lib/events";
 
 const RETRY = { maxAttempts: 3, initialBackoffMs: 2000, base: 2 };
 const WATCHDOG_HOURS = 6;
-const CATCHUP_DAYS = 2;
 /** How many different words to try before failing the run (rotates on enrichment failure). */
 const MAX_WORD_ATTEMPTS = 5;
 
@@ -185,6 +189,8 @@ export const getScheduleSettings = internalQuery({
       paused: s?.pipelinePaused ?? false,
       hour: s?.dailyRunHourUtc ?? 0,
       minute: s?.dailyRunMinuteUtc ?? 30,
+      frequencyCount: s?.frequencyCount ?? 1,
+      frequencyUnit: s?.frequencyUnit ?? "day",
     };
   },
 });
@@ -200,9 +206,18 @@ export const getRunStatus = internalQuery({
   },
 });
 
+/** The most recent pipeline run (by creation), for the cadence gate. */
+export const getLastRun = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    const run = await ctx.db.query("pipelineRuns").order("desc").first();
+    return run ? { startedAt: run.startedAt, status: run.status } : null;
+  },
+});
+
 /**
- * Cron tick (every 30 min): start today's run once the scheduled time passes,
- * and catch up any missed/failed runs from the last CATCHUP_DAYS days.
+ * Cron tick (every 30 min): after the scheduled time, start a run only if the
+ * cadence interval has elapsed since the last run (1/day, 1/week, N/month, …).
  */
 export const tick = internalAction({
   args: {},
@@ -213,15 +228,16 @@ export const tick = internalAction({
     const now = new Date();
     const minutesNow = now.getUTCHours() * 60 + now.getUTCMinutes();
     const scheduledMinutes = sched.hour * 60 + sched.minute;
+    if (minutesNow < scheduledMinutes) return; // not yet the scheduled time today
 
-    for (let d = 0; d <= CATCHUP_DAYS; d++) {
-      const date = new Date(now.getTime() - d * 86400_000).toISOString().slice(0, 10);
-      // Today: only start once the scheduled time has passed.
-      if (d === 0 && minutesNow < scheduledMinutes) continue;
-      const status = await ctx.runQuery(internal.pipeline.getRunStatus, { runDate: date });
-      if (status === "running" || status === "succeeded") continue;
-      await ctx.runMutation(internal.pipeline.startDailyRun, { runDate: date });
+    const intervalDays = frequencyToIntervalDays(sched.frequencyCount, sched.frequencyUnit);
+    const last = await ctx.runQuery(internal.pipeline.getLastRun, {});
+    if (last) {
+      const daysSince = (Date.now() - last.startedAt) / 86400_000;
+      if (daysSince < intervalDays - 0.01) return; // too soon for the next reel
     }
+
+    await ctx.runMutation(internal.pipeline.startDailyRun, { runDate: todayUtc() });
   },
 });
 

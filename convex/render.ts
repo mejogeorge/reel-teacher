@@ -1,5 +1,6 @@
 import { ANIMATION_STYLE_VERSION, assertTransition, isTerminal, type WordStatus } from "@wordcast/shared";
 import { v } from "convex/values";
+import { internal } from "./_generated/api";
 import { internalMutation, internalQuery, mutation, query } from "./_generated/server";
 import { requireWorker } from "./lib/auth";
 import { logEvent } from "./lib/events";
@@ -184,6 +185,50 @@ export const completeJob = mutation({
       content: job.request.content,
       createdAt: now,
     });
+
+    // Auto-publish once (first render only) if enabled in settings.
+    const settings = await ctx.db
+      .query("settings")
+      .withIndex("by_key", (q) => q.eq("key", "global"))
+      .unique();
+    if (settings?.autoPublish) {
+      const existing = await ctx.db
+        .query("postTargets")
+        .withIndex("by_wordId", (q) => q.eq("wordId", job.wordId))
+        .first();
+      if (!existing) {
+        const platforms =
+          settings.publishPlatforms && settings.publishPlatforms.length > 0
+            ? settings.publishPlatforms
+            : ["instagram", "facebook"];
+        for (const platform of platforms) {
+          const ptId = await ctx.db.insert("postTargets", {
+            wordId: job.wordId,
+            platform,
+            status: "pending",
+            renderVersion: job.renderVersion,
+            createdAt: now,
+            updatedAt: now,
+          });
+          if (platform === "instagram") {
+            await ctx.scheduler.runAfter(0, internal.publish.instagramPublish, {
+              wordId: job.wordId,
+              postTargetId: ptId,
+            });
+          } else if (platform === "facebook") {
+            await ctx.scheduler.runAfter(0, internal.publish.facebookPublish, {
+              wordId: job.wordId,
+              postTargetId: ptId,
+            });
+          }
+        }
+        await logEvent(ctx, {
+          wordId: job.wordId,
+          type: "publish.auto",
+          message: `Auto-publish queued: ${platforms.join(", ")}`,
+        });
+      }
+    }
 
     await logEvent(ctx, {
       wordId: job.wordId,

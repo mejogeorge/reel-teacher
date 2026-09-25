@@ -7,6 +7,7 @@ import {
   backgroundMusicModeValidator,
   dictionaryResultValidator,
   eventLevelValidator,
+  frequencyUnitValidator,
   pipelineRunStatusValidator,
   renderJobStatusValidator,
   renderRequestValidator,
@@ -42,6 +43,11 @@ export default defineSchema({
     maxAttemptsPerStep: v.number(),
     pipelinePaused: v.boolean(),
     alertWebhookUrl: v.optional(v.string()),
+    // Optional in the DB (added after initial seed); backfilled by settings.seed.
+    autoPublish: v.optional(v.boolean()),
+    publishPlatforms: v.optional(v.array(v.string())),
+    frequencyCount: v.optional(v.number()),
+    frequencyUnit: v.optional(frequencyUnitValidator),
   }).index("by_key", ["key"]),
 
   // One row per daily run; idempotent by runDate (YYYY-MM-DD).

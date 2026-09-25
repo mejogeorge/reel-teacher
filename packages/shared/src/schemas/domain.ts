@@ -31,3 +31,7 @@ export type EventLevel = z.infer<typeof eventLevelSchema>;
 
 export const assetKindSchema = z.enum(["video", "thumbnail", "voice"]);
 export type AssetKind = z.infer<typeof assetKindSchema>;
+
+/** Posting cadence unit. */
+export const frequencyUnitSchema = z.enum(["day", "week", "month"]);
+export type FrequencyUnit = z.infer<typeof frequencyUnitSchema>;
