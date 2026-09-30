@@ -2,7 +2,12 @@ import { createRequire } from "node:module";
 import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { estimateTimingSegments, type RenderRequest, type VideoInputProps } from "@wordcast/shared";
+import {
+  estimateTimingSegments,
+  premiumReelPropsSchema,
+  type RenderRequest,
+  type VideoInputProps,
+} from "@wordcast/shared";
 import { bundle } from "@remotion/bundler";
 import { renderMedia, renderStill, selectComposition } from "@remotion/renderer";
 
@@ -39,11 +44,57 @@ export interface RenderOptions {
   onProgress?: (progress: number) => void;
 }
 
+/** Render a premium reel (ElevenLabs voice + synced captions) → MP4 + thumbnail. */
+async function renderReel(
+  reelInput: NonNullable<RenderRequest["reel"]>,
+  options: RenderOptions,
+): Promise<RenderResult> {
+  // zod at the worker boundary: fail fast (and apply defaults) instead of
+  // throwing deep inside Remotion if Convex ever sends malformed props.
+  const reel = premiumReelPropsSchema.parse(reelInput);
+  const serveUrl = await ensureBundle();
+  const composition = await selectComposition({ serveUrl, id: "PremiumReel", inputProps: reel });
+  const outDir = await fs.mkdtemp(path.join(os.tmpdir(), "wordcast-reel-"));
+  const videoPath = path.join(outDir, "video.mp4");
+  const thumbPath = path.join(outDir, "thumb.png");
+
+  await renderMedia({
+    serveUrl,
+    composition,
+    codec: "h264",
+    crf: 20,
+    outputLocation: videoPath,
+    inputProps: reel,
+    onProgress: options.onProgress ? ({ progress }) => options.onProgress?.(progress) : undefined,
+  });
+  await renderStill({
+    serveUrl,
+    composition,
+    frame: Math.floor(composition.durationInFrames * 0.15),
+    output: thumbPath,
+    inputProps: reel,
+  });
+
+  const stat = await fs.stat(videoPath);
+  return {
+    outDir,
+    videoPath,
+    thumbPath,
+    durationSec: composition.durationInFrames / composition.fps,
+    bytes: stat.size,
+    width: composition.width,
+    height: composition.height,
+  };
+}
+
 /** Render a job's MP4 + thumbnail into a fresh temp directory. */
 export async function renderJob(
   request: RenderRequest,
   options: RenderOptions = {},
 ): Promise<RenderResult> {
+  // Premium reel path (ElevenLabs voice already generated; audio is a URL).
+  if (request.reel) return renderReel(request.reel, options);
+
   const serveUrl = await ensureBundle();
 
   const inputProps: VideoInputProps = {
@@ -94,7 +145,9 @@ export async function renderJob(
 
 const MAX_BYTES = 100 * 1024 * 1024;
 const MIN_SECONDS = 8;
-const MAX_SECONDS = 70;
+// Reels (dramatic, 8–12 beats) can legitimately run longer than the classic
+// WordVideo, so allow up to 90s before treating it as out of spec.
+const MAX_SECONDS = 90;
 
 /** Validate the render output; throws on anything out of spec. */
 export function validateOutput(result: RenderResult): void {

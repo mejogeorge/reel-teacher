@@ -10,7 +10,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { mutation, query, type QueryCtx } from "./_generated/server";
 import { requireAdmin } from "./lib/auth";
 import { logEvent } from "./lib/events";
-import { enqueueRenderForWord } from "./lib/render";
+import { enqueueRenderForWord, scheduleRenderForApproved } from "./lib/render";
 import { backgroundMusicModeValidator, wordContentValidator } from "./lib/validators";
 
 function todayUtc(): string {
@@ -174,7 +174,8 @@ export const approveNow = mutation({
     assertTransition(word.status, "approved");
     await ctx.db.patch(wordId, { status: "approved", approvedAt: now, updatedAt: now });
     await logEvent(ctx, { wordId, type: "approve.manual", message: "Approved by admin" });
-    await enqueueRenderForWord(ctx, wordId);
+    // Premium reel (or classic if settings.reelMode is off).
+    await scheduleRenderForApproved(ctx, wordId);
   },
 });
 
@@ -270,6 +271,19 @@ export const rerender = mutation({
     }
     await enqueueRenderForWord(ctx, wordId, themeId);
     await logEvent(ctx, { wordId, type: "rerender", message: `Re-render${themeId ? ` (${themeId})` : ""}` });
+  },
+});
+
+/** Admin: build a premium reel (LLM script → ElevenLabs voice → PremiumReel render). */
+export const buildReel = mutation({
+  args: { wordId: v.id("words") },
+  handler: async (ctx, { wordId }) => {
+    await requireAdmin(ctx);
+    const word = await ctx.db.get(wordId);
+    if (!word) throw new Error("word not found");
+    if (!word.content) throw new Error("word has no content to script");
+    await ctx.scheduler.runAfter(0, internal.reel.buildReel, { wordId });
+    await logEvent(ctx, { wordId, type: "reel.requested", message: "Premium reel build requested" });
   },
 });
 

@@ -22,6 +22,7 @@ export function TodayWordCard({ word, assets }: { word: WordDoc; assets: Asset[]
   const reject = useMutation(api.reject);
   const regenerate = useMutation(api.regenerate);
   const rerender = useMutation(api.rerender);
+  const buildReel = useMutation(api.buildReel);
   const publishReel = useMutation(api.publishReel);
   const posts = useQuery(api.getPostTargets, { wordId: word._id });
   const renderStatus = useQuery(api.getRenderStatus, { wordId: word._id });
@@ -116,6 +117,13 @@ export function TodayWordCard({ word, assets }: { word: WordDoc; assets: Asset[]
                 onClick={() => run(() => rerender({ wordId: word._id, themeId: theme }))}
               >
                 Re-render
+              </Button>
+              <Button
+                size="sm"
+                disabled={rendering}
+                onClick={() => run(() => buildReel({ wordId: word._id }))}
+              >
+                Build reel
               </Button>
               {word.status === "rendered" ? (
                 <Button

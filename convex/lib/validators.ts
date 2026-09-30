@@ -120,12 +120,52 @@ export const safetyValidator = v.object({
   model: v.string(),
 });
 
-/** What the pipeline enqueues for a render (voice + music resolved by the worker). */
+export const reelAnimValidator = v.union(
+  v.literal("pop"),
+  v.literal("rise"),
+  v.literal("tilt"),
+  v.literal("drop"),
+  v.literal("flat"),
+  v.literal("whisper"),
+  v.literal("fromL"),
+  v.literal("fromR"),
+);
+
+/** One timed, on-screen caption beat of a premium reel. */
+export const reelSegmentValidator = v.object({
+  startSec: v.number(),
+  lead: v.optional(v.string()),
+  big: v.optional(v.string()),
+  line: v.optional(v.string()),
+  sub: v.optional(v.string()),
+  who: v.optional(v.string()),
+  bubble: v.optional(v.string()),
+  bubbleSide: v.optional(v.union(v.literal("mom"), v.literal("me"))),
+  icon: v.optional(v.string()),
+  anim: reelAnimValidator,
+});
+
+/** Props for the PremiumReel composition (ElevenLabs voice + synced captions). */
+export const premiumReelPropsValidator = v.object({
+  word: v.string(),
+  audioSrc: v.string(),
+  durationSec: v.number(),
+  brandHandle: v.string(),
+  segments: v.array(reelSegmentValidator),
+});
+
+/**
+ * What the pipeline enqueues for a render. `reel` present → the worker renders
+ * the PremiumReel composition; otherwise the classic WordVideo (voice + music
+ * resolved by the worker).
+ */
 export const renderRequestValidator = v.object({
   content: wordContentValidator,
   themeId: v.string(),
   brandHandle: v.string(),
   backgroundMusicMode: backgroundMusicModeValidator,
+  reel: v.optional(premiumReelPropsValidator),
+  reelVoiceStorageId: v.optional(v.id("_storage")),
 });
 
 /** All-optional patch validator for the settings update mutation. */
@@ -146,4 +186,5 @@ export const settingsPatchValidator = v.object({
   publishPlatforms: v.optional(v.array(v.string())),
   frequencyCount: v.optional(v.number()),
   frequencyUnit: v.optional(frequencyUnitValidator),
+  reelMode: v.optional(v.boolean()),
 });

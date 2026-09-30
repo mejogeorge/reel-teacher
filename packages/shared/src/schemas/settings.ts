@@ -21,6 +21,9 @@ export const settingsSchema = z.object({
   // Posting cadence: `frequencyCount` reels per `frequencyUnit`.
   frequencyCount: z.number().int().min(1),
   frequencyUnit: frequencyUnitSchema,
+  // Render style: true → premium ElevenLabs reel; false → classic WordVideo
+  // (operator kill-switch if the LLM/ElevenLabs path is unavailable).
+  reelMode: z.boolean().default(true),
 });
 
 export type Settings = z.infer<typeof settingsSchema>;
@@ -48,4 +51,5 @@ export const DEFAULT_SETTINGS: Settings = {
   publishPlatforms: ["instagram", "facebook"],
   frequencyCount: 1,
   frequencyUnit: "day",
+  reelMode: true,
 };

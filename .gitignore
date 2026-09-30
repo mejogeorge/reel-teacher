@@ -42,3 +42,6 @@ pnpm-debug.log*
 
 # test
 coverage/
+
+# local scratch: reel prototypes, sample renders, test audio
+persuasion-demo/

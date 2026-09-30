@@ -60,6 +60,10 @@ export const convexEnvSchema = z.object({
   // Facebook Page publishing (same Meta app + Page token). Absent = disabled.
   FB_PAGE_ID: z.string().optional(),
   FB_ACCESS_TOKEN: z.string().optional(),
+  // ElevenLabs TTS for premium reels. Absent = reel voice generation disabled.
+  ELEVENLABS_API_KEY: z.string().optional(),
+  ELEVENLABS_VOICE_ID: z.string().optional(),
+  ELEVENLABS_MODEL: z.string().min(1).default("eleven_v3"),
 });
 export type ConvexEnv = z.infer<typeof convexEnvSchema>;
 

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { wordContentSchema } from "./content.js";
 import { backgroundMusicModeSchema } from "./domain.js";
+import { premiumReelPropsSchema } from "./premiumReel.js";
 
 /**
  * One narration segment: a key matching a scene and its duration. `src` is the
@@ -44,6 +45,8 @@ export const renderRequestSchema = z.object({
   themeId: z.string().min(1),
   brandHandle: z.string().min(1),
   backgroundMusicMode: backgroundMusicModeSchema,
+  /** Present → render the PremiumReel composition instead of WordVideo. */
+  reel: premiumReelPropsSchema.optional(),
 });
 
 export type RenderRequest = z.infer<typeof renderRequestSchema>;

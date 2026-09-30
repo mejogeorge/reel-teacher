@@ -48,6 +48,7 @@ export default defineSchema({
     publishPlatforms: v.optional(v.array(v.string())),
     frequencyCount: v.optional(v.number()),
     frequencyUnit: v.optional(frequencyUnitValidator),
+    reelMode: v.optional(v.boolean()),
   }).index("by_key", ["key"]),
 
   // One row per daily run; idempotent by runDate (YYYY-MM-DD).

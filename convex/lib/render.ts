@@ -1,8 +1,27 @@
+import { internal } from "../_generated/api";
 import type { Id } from "../_generated/dataModel";
 import type { MutationCtx } from "../_generated/server";
 import { logEvent } from "./events";
 
 const DAY_MS = 86400_000;
+
+/**
+ * Kick off rendering for a just-approved word: premium reel by default, or the
+ * classic WordVideo renderer when settings.reelMode is explicitly false (the
+ * operator kill-switch if ElevenLabs/LLM is down). Reel build has its own
+ * fallback to classic on failure.
+ */
+export async function scheduleRenderForApproved(ctx: MutationCtx, wordId: Id<"words">): Promise<void> {
+  const settings = await ctx.db
+    .query("settings")
+    .withIndex("by_key", (q) => q.eq("key", "global"))
+    .unique();
+  if (settings?.reelMode === false) {
+    await enqueueRenderForWord(ctx, wordId);
+  } else {
+    await ctx.scheduler.runAfter(0, internal.reel.buildReel, { wordId });
+  }
+}
 
 /**
  * Enqueue a render job for an approved word. Resolves theme (rotated by day),

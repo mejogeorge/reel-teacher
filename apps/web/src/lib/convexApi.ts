@@ -151,6 +151,7 @@ export const api = {
   reject: m<{ wordId: string; reason: string }, null>("admin:reject"),
   regenerate: m<{ wordId: string }, null>("admin:regenerate"),
   rerender: m<{ wordId: string; themeId?: string }, null>("admin:rerender"),
+  buildReel: m<{ wordId: string }, null>("admin:buildReel"),
   retryFailed: m<{ wordId: string }, null>("admin:retryFailed"),
   editContent: m<{ wordId: string; content: WordContent }, null>("admin:editContent"),
   addWordManually: m<{ word: string }, string>("admin:addWordManually"),
