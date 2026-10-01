@@ -280,8 +280,11 @@ export const PremiumReel: React.FC<PremiumReelProps> = ({ word, audioSrc, brandH
   const starts = useMemo(() => segments.map((s) => Math.round(s.startSec * fps)), [segments, fps]);
   let active = -1;
   for (let i = 0; i < starts.length; i++) {
-    if (frame >= starts[i]!) active = i;
+    const start = starts[i];
+    if (start !== undefined && frame >= start) active = i;
   }
+  const activeSeg = active >= 0 ? segments[active] : undefined;
+  const activeStart = active >= 0 ? (starts[active] ?? 0) : 0;
 
   const progress = interpolate(frame, [0, durationInFrames], [0, 1], { extrapolateRight: "clamp" });
   const chipOn = spring({ frame: frame - Math.round(0.3 * fps), fps, config: { damping: 16 } });
@@ -332,7 +335,7 @@ export const PremiumReel: React.FC<PremiumReelProps> = ({ word, audioSrc, brandH
       {/* Caption card */}
       <AbsoluteFill style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
         <div style={{ transform: `scale(${breathe})` }}>
-          {active >= 0 ? <Beat seg={segments[active]!} localFrame={frame - starts[active]!} /> : null}
+          {activeSeg ? <Beat seg={activeSeg} localFrame={frame - activeStart} /> : null}
         </div>
       </AbsoluteFill>
 

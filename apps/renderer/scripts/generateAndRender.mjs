@@ -67,13 +67,13 @@ const ends = align.character_end_times_seconds ?? starts;
 const full = chars.join("");
 const fullLower = full.toLowerCase();
 let cursor = 0;
-const segments = BEATS.map((b, i) => {
+const segments = BEATS.map((b) => {
   const key = b.spoken.slice(0, 14).toLowerCase();
   let at = fullLower.indexOf(key, cursor);
   if (at < 0) at = fullLower.indexOf(b.spoken.slice(0, 6).toLowerCase(), cursor);
   const startSec = at >= 0 ? starts[at] : (starts[cursor] ?? 0);
   if (at >= 0) cursor = at + 1;
-  const { tag, spoken, ...display } = b;
+  const { tag: _tag, spoken: _spoken, ...display } = b;
   return { startSec: Number(startSec.toFixed(3)), ...display };
 });
 const durationSec = Number((ends[ends.length - 1] ?? 39).toFixed(2));
