@@ -274,6 +274,15 @@ export const rerender = mutation({
   },
 });
 
+/** Admin: refresh IG/FB engagement metrics for all published posts now. */
+export const refreshMetrics = mutation({
+  args: {},
+  handler: async (ctx) => {
+    await requireAdmin(ctx);
+    await ctx.scheduler.runAfter(0, internal.metrics.refreshAll, {});
+  },
+});
+
 /** Admin: build a premium reel (LLM script → ElevenLabs voice → PremiumReel render). */
 export const buildReel = mutation({
   args: { wordId: v.id("words") },

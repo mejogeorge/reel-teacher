@@ -24,9 +24,13 @@ export function TodayWordCard({ word, assets }: { word: WordDoc; assets: Asset[]
   const rerender = useMutation(api.rerender);
   const buildReel = useMutation(api.buildReel);
   const publishReel = useMutation(api.publishReel);
+  const refreshMetrics = useMutation(api.refreshMetrics);
   const posts = useQuery(api.getPostTargets, { wordId: word._id });
+  const metrics = useQuery(api.getMetrics, { wordId: word._id });
   const renderStatus = useQuery(api.getRenderStatus, { wordId: word._id });
   const [theme, setTheme] = useState<string>(word.themeId ?? "minimal-light");
+
+  const metricsFor = (platform: string) => metrics?.find((m) => m.platform === platform);
 
   const latestVideo = assets
     .filter((a) => a.kind === "video" && a.url)
@@ -175,9 +179,32 @@ export function TodayWordCard({ word, assets }: { word: WordDoc; assets: Asset[]
                     ) : (
                       <span className="text-purple-600">{p.status}…</span>
                     )}
+                    {(() => {
+                      const m = metricsFor(platform);
+                      if (!m || p.status !== "published") return null;
+                      const parts = [
+                        m.views != null ? `${m.views} views` : null,
+                        m.likes != null ? `${m.likes} likes` : null,
+                        m.comments != null ? `${m.comments} comments` : null,
+                        m.shares != null ? `${m.shares} shares` : null,
+                        m.reach != null ? `${m.reach} reach` : null,
+                      ].filter(Boolean);
+                      return parts.length ? (
+                        <span className="text-muted-foreground"> · {parts.join(" · ")}</span>
+                      ) : null;
+                    })()}
                   </p>
                 );
               })}
+              {posts?.some((p) => p.status === "published") ? (
+                <button
+                  type="button"
+                  className="pt-1 text-xs text-purple-600 hover:underline"
+                  onClick={() => run(() => refreshMetrics({}))}
+                >
+                  ↻ Refresh metrics
+                </button>
+              ) : null}
             </div>
           </div>
 

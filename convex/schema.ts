@@ -160,6 +160,25 @@ export default defineSchema({
     .index("by_wordId", ["wordId"])
     .index("by_status", ["status"]),
 
+  // Phase 2: latest engagement snapshot per published post (one row per
+  // postTarget, refreshed by a cron). Feeds the dashboard and the engagement
+  // feedback loop that will bias future word/style choices.
+  postMetrics: defineTable({
+    wordId: v.id("words"),
+    postTargetId: v.id("postTargets"),
+    platform: v.string(),
+    externalId: v.string(),
+    likes: v.optional(v.number()),
+    comments: v.optional(v.number()),
+    shares: v.optional(v.number()),
+    views: v.optional(v.number()),
+    reach: v.optional(v.number()),
+    saved: v.optional(v.number()),
+    fetchedAt: v.number(),
+  })
+    .index("by_postTarget", ["postTargetId"])
+    .index("by_wordId", ["wordId"]),
+
   // Produced media stored in Convex file storage; independent of any platform.
   assets: defineTable({
     wordId: v.id("words"),

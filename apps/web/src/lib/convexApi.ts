@@ -122,6 +122,18 @@ export interface RenderStatus {
   updatedAt: number;
 }
 
+export interface PostMetric {
+  _id: string;
+  platform: string;
+  likes?: number;
+  comments?: number;
+  shares?: number;
+  views?: number;
+  reach?: number;
+  saved?: number;
+  fetchedAt: number;
+}
+
 /** Available theme ids (keep in sync with packages/video themes). */
 export const THEME_IDS = ["minimal-light", "bold-dark", "chalkboard"] as const;
 
@@ -145,6 +157,7 @@ export const api = {
   getSettings: q<NoArgs, SettingsDoc | null>("settings:get"),
   getPostTargets: q<{ wordId: string }, PostTarget[]>("admin:getPostTargets"),
   getRenderStatus: q<{ wordId: string }, RenderStatus | null>("admin:getRenderStatus"),
+  getMetrics: q<{ wordId: string }, PostMetric[]>("metricsData:getMetricsByWord"),
 
   approveNow: m<{ wordId: string }, null>("admin:approveNow"),
   changeWord: m<{ wordId: string }, null>("admin:changeWord"),
@@ -174,6 +187,7 @@ export const api = {
   setMusicActive: m<{ trackId: string; active: boolean }, null>("admin:setMusicActive"),
   publishToInstagram: m<{ wordId: string }, null>("admin:publishToInstagram"),
   publishReel: m<{ wordId: string; platforms?: string[] }, null>("admin:publishReel"),
+  refreshMetrics: m<NoArgs, null>("admin:refreshMetrics"),
   updateSettings: m<{ patch: Partial<Settings> }, null>("settings:update"),
   bootstrap: m<NoArgs, null>("admin:bootstrap"),
 };

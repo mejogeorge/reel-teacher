@@ -12,4 +12,7 @@ crons.interval("pipeline watchdog", { hours: 1 }, internal.pipeline.watchdog, {}
 // Requeue render jobs whose worker lease expired (crashed mid-render).
 crons.interval("requeue expired renders", { minutes: 5 }, internal.render.requeueExpiredJobs, {});
 
+// Refresh IG/FB engagement metrics for published posts (feeds the dashboard).
+crons.interval("refresh post metrics", { hours: 6 }, internal.metrics.refreshAll, {});
+
 export default crons;
