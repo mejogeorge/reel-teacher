@@ -174,9 +174,19 @@ export const safetyCheck = internalAction({
     const contentText = JSON.stringify(word.content);
     const lower = contentText.toLowerCase();
 
-    // 1. Blocklist substring match (fail closed on any hit).
+    // 1. Blocklist match (fail closed on any hit). Use WORD BOUNDARIES for
+    // letter/number terms so "tit" doesn't flag "exhibition" or "cum"
+    // "incumbent" (Scunthorpe problem); fall back to substring for terms with
+    // punctuation/symbols (e.g. "s&m").
     const blocklist = await ctx.runQuery(internal.discoveryData.getBlocklistTerms, {});
-    const hit = blocklist.find((t) => t.length > 2 && lower.includes(t));
+    const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const hit = blocklist.find((t) => {
+      if (t.length <= 2) return false;
+      if (/^[\p{L}\p{N}]+$/u.test(t)) {
+        return new RegExp(`\\b${escapeRegExp(t)}\\b`, "iu").test(contentText);
+      }
+      return lower.includes(t.toLowerCase());
+    });
     if (hit) {
       await ctx.runMutation(internal.enrichData.setSafetyResult, {
         wordId,
