@@ -1,5 +1,5 @@
 import { createRequire } from "node:module";
-import { promises as fs } from "node:fs";
+import { promises as fs, existsSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import {
@@ -23,10 +23,16 @@ function videoEntryPoint(): string {
 
 let cachedServeUrl: string | undefined;
 export async function ensureBundle(): Promise<string> {
-  if (!cachedServeUrl) {
-    cachedServeUrl = await bundle({ entryPoint: videoEntryPoint() });
+  // Reuse the cached bundle only if its temp dir still exists — long-lived workers
+  // hit OS garbage-collection of the /var/folders bundle between renders
+  // ("index.html does not exist"); re-bundle in that case.
+  const cached = cachedServeUrl;
+  if (cached && (cached.startsWith("http") || existsSync(path.join(cached, "index.html")))) {
+    return cached;
   }
-  return cachedServeUrl;
+  const fresh = await bundle({ entryPoint: videoEntryPoint() });
+  cachedServeUrl = fresh;
+  return fresh;
 }
 
 export interface RenderResult {

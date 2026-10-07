@@ -225,9 +225,10 @@ const Beat: React.FC<{ seg: ReelSegment; localFrame: number }> = ({ seg, localFr
         maxWidth: vh(46),
         padding: `${vh(5)}px ${vh(4)}px`,
         borderRadius: vh(3.2),
-        background: "rgba(255,255,255,0.05)",
-        backdropFilter: "blur(28px) saturate(1.2)",
-        WebkitBackdropFilter: "blur(28px) saturate(1.2)",
+        // Translucent dark panel instead of backdrop-filter blur: Chromium
+        // re-computes backdrop-filter every frame (very slow headless), which
+        // was pushing renders past the timeout. This reads near-identical.
+        background: "rgba(26,18,14,0.62)",
         border: "1px solid rgba(255,255,255,0.10)",
         boxShadow: "0 40px 120px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.08)",
         fontFamily: FONTS.inter,
@@ -253,8 +254,10 @@ const Background: React.FC = () => {
     width: size,
     height: size,
     borderRadius: "50%",
-    background: `radial-gradient(circle at 40% 40%, ${color}, transparent 70%)`,
-    filter: "blur(60px)",
+    // Soft edge via the radial gradient itself (cheap) rather than a 60px CSS
+    // blur filter re-rasterised every frame as the orb drifts.
+    background: `radial-gradient(circle at 40% 40%, ${color}, transparent 68%)`,
+    filter: "blur(24px)",
   });
   return (
     <AbsoluteFill style={{ backgroundColor: "#0f0b09" }}>
@@ -317,9 +320,7 @@ export const PremiumReel: React.FC<PremiumReelProps> = ({ word, audioSrc, brandH
           transform: `translateX(-50%) translateY(${(1 - chipOn) * -14}px)`,
           padding: `${vh(0.9)}px ${vh(2.4)}px`,
           borderRadius: 999,
-          background: "rgba(255,255,255,0.06)",
-          backdropFilter: "blur(20px)",
-          WebkitBackdropFilter: "blur(20px)",
+          background: "rgba(26,18,14,0.6)",
           border: "1px solid rgba(255,192,106,0.35)",
           fontFamily: FONTS.inter,
           fontSize: vh(2.3),

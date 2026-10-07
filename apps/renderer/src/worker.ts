@@ -8,7 +8,7 @@ import { uploadFile } from "./upload.js";
 
 const POLL_MS = 15_000;
 const HEARTBEAT_MS = 60_000;
-const RENDER_TIMEOUT_MS = 5 * 60_000;
+const RENDER_TIMEOUT_MS = 9 * 60_000;
 
 let stopping = false;
 
@@ -106,7 +106,7 @@ async function processJob(client: Client, env: Env, job: ClaimedJob): Promise<vo
 export async function runOnce(): Promise<void> {
   const env = getRendererEnv();
   const client = createConvexClient(env.CONVEX_URL);
-  const deadline = Date.now() + 14 * 60_000;
+  const deadline = Date.now() + 24 * 60_000; // room for one full render (<=9min) + upload
   let emptyPolls = 0;
 
   // Download/locate Chromium before claiming work (no @remotion/cli in this app).
