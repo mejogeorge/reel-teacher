@@ -41,12 +41,91 @@ export const reelScriptSchema = z.object({
 });
 export type ReelScript = z.infer<typeof reelScriptSchema>;
 
+/** A scriptwriter character. The voice timbre stays the same (one ElevenLabs
+ * voice), but the persona, energy, and example scenario change per word so reels
+ * don't all feel like the same "playful girl + Indian mom" bit. */
+interface Persona {
+  name: string;
+  style: string;
+  scenario: string;
+}
+
+const DEFAULT_PERSONA: Persona = {
+  name: "a playful, sarcastic Indian girl at a café",
+  style:
+    "You over-act and dramatically imitate your sweet, emotional Indian mom versus your own firm voice; you giggle and tease.",
+  scenario: "a funny mom-vs-you family exchange (food, marriage, studies)",
+};
+
+/** Rotating cast — one is chosen per word (see pickPersona). Keep clean + fun. */
+export const REEL_PERSONAS: Persona[] = [
+  DEFAULT_PERSONA,
+  {
+    name: "an over-caffeinated hype friend",
+    style: "You are WAY too excited about everything — fast, loud, voice cracking with enthusiasm.",
+    scenario: "wildly overreacting to a tiny everyday win",
+  },
+  {
+    name: "a deadpan, unbothered Gen-Z teen",
+    style: "Flat, dry, sarcastic, almost zero energy on purpose — the comedy is how little you care.",
+    scenario: "a dry, relatable take on daily life (texting, school, chores)",
+  },
+  {
+    name: "a grand dramatic theatre narrator",
+    style: "Booming, Shakespearean, overly serious — you treat a mundane thing as an epic tragedy.",
+    scenario: "narrating a tiny everyday event like an epic saga",
+  },
+  {
+    name: "a nerdy professor who gets WAY too into it",
+    style: "You start calm and academic, then spiral into obsessive excitement, talking faster and faster.",
+    scenario: "geeking out over the word's origin or a fun fact",
+  },
+  {
+    name: "a gossipy best friend spilling tea",
+    style: "Conspiratorial, whispery, scandalised, leaning in close like it's a secret.",
+    scenario: "framing it as juicy gossip about 'someone'",
+  },
+  {
+    name: "a smooth, confident hype narrator",
+    style: "Cool, rhythmic, street-smart swagger — effortless, like the word is the coolest thing ever.",
+    scenario: "flexing the word with total swagger",
+  },
+  {
+    name: "a wholesome grandma telling a cozy story",
+    style: "Warm, slow, loving, nostalgic, with little chuckles.",
+    scenario: "a gentle 'back in my day' anecdote",
+  },
+  {
+    name: "a moody noir detective narrating a case",
+    style: "Low, suspenseful, clipped sentences, smoky late-night vibe.",
+    scenario: "treating the word like a mystery you're cracking",
+  },
+  {
+    name: "an over-the-top sports commentator",
+    style: "Breathless play-by-play, rising excitement, crowd-roar energy.",
+    scenario: "calling the word like the winning moment of a match",
+  },
+];
+
+/** Deterministically pick a persona from the word (FNV-1a → even spread, reproducible). */
+export function pickPersona(word: string): Persona {
+  let h = 2166136261;
+  const w = word.toLowerCase();
+  for (let i = 0; i < w.length; i++) {
+    h ^= w.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return REEL_PERSONAS[(h >>> 0) % REEL_PERSONAS.length] ?? DEFAULT_PERSONA;
+}
+
 /**
- * Prompt for the reel scriptwriter: a witty, curious, playful English-teacher
- * persona that makes an uncommon word fun and memorable in a vertical reel.
+ * Prompt for the reel scriptwriter. A persona is chosen per word so every reel
+ * has a distinct character, energy, and example scenario (not always the
+ * mom/child bit) — while keeping the dramatic, over-acted delivery.
  */
 export function buildReelScriptPrompt(content: WordContent): string {
-  return `You are a PLAYFUL, witty, sarcastic Indian girl teaching an English word to your Instagram followers from a café. You perform a one-person mono-act: you OVER-ACT, you do dramatic character imitations (especially a sweet/emotional Indian mom vs your own firm voice), you giggle, you tease. Big drama. More than required. Make it FUN and memorable.
+  const persona = pickPersona(content.word);
+  return `You are ${persona.name}, making a dramatic, funny "Word of the Day" reel for Instagram/Facebook. ${persona.style} OVER-ACT — more drama than necessary — and make it FUN and memorable. Commit FULLY to this persona; it is specific to this word.
 
 WORD: ${content.word}
 PART OF SPEECH: ${content.partOfSpeech}
@@ -54,27 +133,14 @@ MEANING: ${content.simpleMeaning}
 EXAMPLES: ${content.examples.join(" | ")}
 SYNONYMS: ${content.synonyms.join(", ")}
 
-STYLE REFERENCE — this is the exact energy and delivery I want (for a different word, "persuasion"):
-[excited, leaning in] Word of the day… PERSUASION!
-[sarcastic] Not "persuation," okay? [giggles] Spelling ko bhi persuade karna padega.
-[confident teacher voice] Persuasion means convincing someone to do something they never planned to do.
-[mischievous] Best example? Indian moms.
-[imitating a sweet Indian mom] "Beta… bas ek aur roti."
-[own voice, firm] "No, Mummy, I'm full."
-[imitating mom, wounded and emotional] "Maine itne pyaar se banayi thi…"
-[short pause] [deadpan] Four rotis later… that is persuasion.
-[back to teacher tone] Use it like this: "After a lot of persuasion, my dad agreed to the Goa trip."
-[whispers, conspiratorial] "A lot" means three months of begging.
-[playful, smiling] Follow for more words. [short pause] I'm not persuading you… [teasing laugh] just suggesting.
-
-Write a 30–45 second script for "${content.word}" in EXACTLY that dramatic style, as an ORDERED list of 8–12 "beats". Structure: excited hook → honest definition → a funny relatable mini-dialogue (imitate distinct characters, e.g. mom vs you) → one clean usage sentence → playful call-to-action.
+Write a 30–45 second script as an ORDERED list of 8–12 "beats". Structure: a punchy hook that reveals the word → an honest one-line definition → a FUNNY example in your persona's style (${persona.scenario}; a short 2–4 line character exchange works great) → one clean usage sentence → a playful call-to-action to follow.
 
 Return STRICT JSON: { "beats": [ { ...beat } ] }. Each beat:
-- "voice": the DRAMATIC ElevenLabs line — start with an expressive delivery tag in square brackets and use rich, over-acted cues, imitating characters where relevant. You MAY add inline cues like [giggles], [teasing laugh], [short pause], [wounded, emotional]. For dialogue, use tags like "[imitating a sweet Indian mom]" and "[own voice, firm]" so each character sounds DISTINCT. Push the drama harder than feels necessary.
-- "spoken": the SAME words as "voice" but CLEAN — no square-bracket tags at all. This is shown on screen EXACTLY as the caption (what the viewer reads = what they hear), so KEEP IT SHORT: one short phrase or sentence per beat (≤ 12 words). Break longer thoughts into multiple beats. The spoken words must appear verbatim inside "voice".
-- For a character/dialogue line, set "who" (e.g. "Mom" or "Me") and "bubbleSide" ("mom" or "me") so it renders as that character's bubble. (Do NOT write separate big/line captions — the caption is always the spoken words.)
+- "voice": the DRAMATIC ElevenLabs line — start with an expressive delivery tag in square brackets that fits THIS persona, plus rich inline cues like [giggles], [gasps], [whispers], [short pause], [imitating <a character>]. For any two-person exchange, give each speaker a DISTINCT delivery so they sound different. Push the drama hard.
+- "spoken": the SAME words as "voice" but CLEAN — no square-bracket tags. Shown on screen EXACTLY as the caption (what you read = what you hear), so KEEP IT SHORT: one short phrase or sentence per beat (≤ 12 words). The spoken words must appear verbatim inside "voice".
+- For a two-person exchange, set "who" to the speaker's name that FITS THIS SCENARIO (not always Mom/Me — e.g. Coach, Critic, Grandma, Suspect) and "bubbleSide" to "mom" or "me" purely to pick the bubble colour (alternate speakers).
 - "icon": the MOST relevant icon from this list ONLY: ${REEL_ICONS.join(", ")}.
-- "anim": one of: ${REEL_ANIMS.join(", ")}. "pop" for short reveals, "rise" for sentences, "fromL"/"fromR" for dialogue, "whisper" for asides, "drop" for punchlines.
+- "anim": one of: ${REEL_ANIMS.join(", ")}. "pop" short reveals, "rise" sentences, "fromL"/"fromR" dialogue, "whisper" asides, "drop" punchlines.
 
 Keep it clean (no profanity, politics, slurs). Output ONLY the JSON.`;
 }
