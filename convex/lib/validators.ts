@@ -140,7 +140,9 @@ export const reelSegmentValidator = v.object({
   sub: v.optional(v.string()),
   who: v.optional(v.string()),
   bubble: v.optional(v.string()),
-  bubbleSide: v.optional(v.union(v.literal("mom"), v.literal("me"))),
+  // a/b are the current speaker-colour keys; mom/me are legacy values kept so
+  // existing renderJobs rows still validate (new data only uses a/b).
+  bubbleSide: v.optional(v.union(v.literal("a"), v.literal("b"), v.literal("mom"), v.literal("me"))),
   icon: v.optional(v.string()),
   anim: reelAnimValidator,
 });

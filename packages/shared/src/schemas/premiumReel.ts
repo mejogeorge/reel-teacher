@@ -32,7 +32,7 @@ export const reelSegmentSchema = z.object({
   /** Dialogue bubble text + speaker label + which side it comes from. */
   who: z.string().optional(),
   bubble: z.string().optional(),
-  bubbleSide: z.enum(["mom", "me"]).optional(),
+  bubbleSide: z.enum(["a", "b"]).optional(), // just picks the bubble colour
   /** Optional line-icon name (see video/src/icons) shown above the caption. */
   icon: z.string().optional(),
   anim: reelAnimSchema.default("rise"),

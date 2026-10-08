@@ -30,7 +30,7 @@ export const reelBeatSchema = z.object({
   sub: z.string().optional(), // small aside below
   who: z.string().optional(), // dialogue speaker label
   bubble: z.string().optional(), // dialogue text (shown in a colored bubble)
-  bubbleSide: z.enum(["mom", "me"]).optional(),
+  bubbleSide: z.enum(["a", "b"]).optional(), // two speaker colours (A/B), nothing more
   icon: z.string().optional(), // sanitized against REEL_ICONS downstream
   anim: z.string().optional(), // sanitized against REEL_ANIMS downstream
 });
@@ -51,10 +51,9 @@ interface Persona {
 }
 
 const DEFAULT_PERSONA: Persona = {
-  name: "a playful, sarcastic Indian girl at a café",
-  style:
-    "You over-act and dramatically imitate your sweet, emotional Indian mom versus your own firm voice; you giggle and tease.",
-  scenario: "a funny mom-vs-you family exchange (food, marriage, studies)",
+  name: "a quick-witted stand-up comedian",
+  style: "Sharp, playful, sarcastic — setup then punchline, with great comic timing.",
+  scenario: "a short stand-up bit riffing on how people use (or misuse) the word",
 };
 
 /** Rotating cast — one is chosen per word (see pickPersona). Keep clean + fun. */
@@ -135,10 +134,12 @@ SYNONYMS: ${content.synonyms.join(", ")}
 
 Write a 30–45 second script as an ORDERED list of 8–12 "beats". Structure: a punchy hook that reveals the word → an honest one-line definition → a FUNNY example in your persona's style (${persona.scenario}; a short 2–4 line character exchange works great) → one clean usage sentence → a playful call-to-action to follow.
 
+IMPORTANT — VARIETY: Do NOT use a mother-and-child / parent / family-dinner / "beta, one more roti" scene. That bit is overused and banned. Invent a FRESH scenario and FRESH characters that fit THIS persona and word every time (e.g. a coach and player, a barista and customer, a detective and suspect, two coworkers, a game-show host). Make each reel feel different from the last.
+
 Return STRICT JSON: { "beats": [ { ...beat } ] }. Each beat:
 - "voice": the DRAMATIC ElevenLabs line — start with an expressive delivery tag in square brackets that fits THIS persona, plus rich inline cues like [giggles], [gasps], [whispers], [short pause], [imitating <a character>]. For any two-person exchange, give each speaker a DISTINCT delivery so they sound different. Push the drama hard.
 - "spoken": the SAME words as "voice" but CLEAN — no square-bracket tags. Shown on screen EXACTLY as the caption (what you read = what you hear), so KEEP IT SHORT: one short phrase or sentence per beat (≤ 12 words). The spoken words must appear verbatim inside "voice".
-- For a two-person exchange, set "who" to the speaker's name that FITS THIS SCENARIO (not always Mom/Me — e.g. Coach, Critic, Grandma, Suspect) and "bubbleSide" to "mom" or "me" purely to pick the bubble colour (alternate speakers).
+- For a two-person exchange, set "who" to the speaker's name that FITS THIS SCENARIO (e.g. Coach, Barista, Critic, Detective, Rival) and "bubbleSide" to "a" or "b" (just two bubble colours — alternate the speakers). Never use Mom/parent/child characters.
 - "icon": the MOST relevant icon from this list ONLY: ${REEL_ICONS.join(", ")}.
 - "anim": one of: ${REEL_ANIMS.join(", ")}. "pop" short reveals, "rise" sentences, "fromL"/"fromR" dialogue, "whisper" asides, "drop" punchlines.
 
@@ -171,7 +172,7 @@ export function buildReelNarration(beats: ReelBeat[]): string {
  */
 export function reelBeatToSegment(beat: ReelBeat, startSec: number): ReelSegment {
   const text = beat.spoken.trim();
-  const isDialogue = beat.bubbleSide === "mom" || beat.bubbleSide === "me";
+  const isDialogue = beat.bubbleSide === "a" || beat.bubbleSide === "b";
   const short = text.split(/\s+/).filter(Boolean).length <= 3;
   return {
     startSec: Number(startSec.toFixed(3)),

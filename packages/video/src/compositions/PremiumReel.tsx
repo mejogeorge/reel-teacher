@@ -133,7 +133,7 @@ const Beat: React.FC<{ seg: ReelSegment; localFrame: number }> = ({ seg, localFr
 
   let body: React.ReactNode;
   if (seg.bubble) {
-    const isMom = seg.bubbleSide === "mom";
+    const isA = seg.bubbleSide === "a";
     body = (
       <div
         style={{
@@ -144,9 +144,9 @@ const Beat: React.FC<{ seg: ReelSegment; localFrame: number }> = ({ seg, localFr
           fontWeight: 700,
           lineHeight: 1.18,
           maxWidth: "94%",
-          background: isMom ? "rgba(255,157,184,0.12)" : "rgba(143,208,255,0.12)",
-          border: `1px solid ${isMom ? "rgba(255,157,184,0.4)" : "rgba(143,208,255,0.4)"}`,
-          color: isMom ? "#ffdbe6" : "#dcefff",
+          background: isA ? "rgba(255,157,184,0.12)" : "rgba(143,208,255,0.12)",
+          border: `1px solid ${isA ? "rgba(255,157,184,0.4)" : "rgba(143,208,255,0.4)"}`,
+          color: isA ? "#ffdbe6" : "#dcefff",
         }}
       >
         {seg.who ? (
